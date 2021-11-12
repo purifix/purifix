@@ -1,15 +1,12 @@
 {
   description = "An over-engineered Hello World in bash";
 
-  # Nixpkgs / NixOS version to use.
+  # This is the code from
+  # https://github.com/NixOS/nixpkgs/pull/144076
   inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=dhallDirectoryToNix";
 
   outputs = { self, nixpkgs }:
     let
-
-      # Generate a user-friendly version numer.
-      version = builtins.substring 0 8 self.lastModifiedDate;
-
       # System types to support.
       supportedSystems = [
         "x86_64-linux"
@@ -29,14 +26,10 @@
       # A Nixpkgs overlay.
       overlay = import ./nix/overlay.nix;
 
-      # Provide some binary packages for selected system types.
       packages = forAllSystems (system: {
         # inherit (nixpkgsFor.${system}) example-purescript-package;
       });
 
-      # The default package for 'nix build'. This makes sense if the
-      # flake provides only one package or there is a clear "main"
-      # package.
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
 
       devShells = forAllSystems (system: {
