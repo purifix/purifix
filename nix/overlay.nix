@@ -5,7 +5,6 @@ final: prev: {
     src = ../example-purescript-package;
   };
 
-
   purescript-dev-shell = final.mkShell {
     nativeBuildInputs = [
       final.dhall

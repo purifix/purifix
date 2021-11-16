@@ -1,5 +1,5 @@
 {
-  description = "An over-engineered Hello World in bash";
+  description = "Tool for building PureScript projects with Nix";
 
   # This is the code from
   # https://github.com/NixOS/nixpkgs/pull/144076
@@ -22,7 +22,6 @@
     in
 
     {
-
       # A Nixpkgs overlay.
       overlay = import ./nix/overlay.nix;
 
@@ -37,6 +36,5 @@
       });
 
       devShell = forAllSystems (system: self.devShells.${system}.purescript-dev-shell);
-
     };
 }
