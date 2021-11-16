@@ -26,7 +26,7 @@
       overlay = import ./nix/overlay.nix;
 
       packages = forAllSystems (system: {
-        # inherit (nixpkgsFor.${system}) example-purescript-package;
+        inherit (nixpkgsFor.${system}) example-purescript-package;
       });
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
