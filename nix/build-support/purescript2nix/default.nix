@@ -10,7 +10,7 @@
 let
   spagoDhall = dhallDirectoryToNix { inherit src; file = "spago.dhall"; };
 
-  spagoDhallDepClosure = import ./spagoDhallDependencyClosure.nix spagoDhall;
+  spagoDhallDeps = import ./spagoDhallDependencyClosure.nix spagoDhall;
 
   builtPureScriptCode = stdenv.mkDerivation {
     inherit pname version src;
