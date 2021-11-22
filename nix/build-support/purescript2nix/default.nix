@@ -1,5 +1,5 @@
 
-{ dhallDirectoryToNix, purescript, stdenv }:
+{ callPackage, dhallDirectoryToNix, lib, purescript, stdenv }:
 
 {
   pname
@@ -11,6 +11,8 @@ let
   spagoDhall = dhallDirectoryToNix { inherit src; file = "spago.dhall"; };
 
   spagoDhallDeps = import ./spagoDhallDependencyClosure.nix spagoDhall;
+
+  purescriptPackageToFOD = callPackage ./purescriptPackageToFOD.nix {};
 
   builtPureScriptCode = stdenv.mkDerivation {
     inherit pname version src;
