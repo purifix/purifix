@@ -1,5 +1,5 @@
 
-{ dhallDirectoryToNix, purescript, spago, stdenv }:
+{ dhallDirectoryToNix, purescript, stdenv }:
 
 {
   pname
@@ -15,7 +15,6 @@ let
 
     nativeBuildInputs = [
       purescript
-      spago
     ];
 
     buildPhase = ''
