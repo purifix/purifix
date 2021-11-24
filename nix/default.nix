@@ -1,9 +1,12 @@
 {}:
 
-# Nixpkgs with overlays for purescript2nix.
-# This is convenient to use with `nix repl`:
+# Nixpkgs with overlays for purescript2nix.  This is convenient to use with
+# `nix repl`:
 #
 # $ nix repl ./nix
+# nix-repl>
+#
+# Within this nix-repl, you have access to everything defined in ./overlay.nix.
 
 let
   flake-lock = builtins.fromJSON (builtins.readFile ../flake.lock);
