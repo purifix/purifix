@@ -16,6 +16,9 @@ final: prev: {
     src = ../example-purescript-package;
   };
 
+  # This is a simple develpoment shell with purescript and spago.  This can be
+  # used for building the ../example-purescript-package repo using purs and
+  # spago.
   purescript-dev-shell = final.mkShell {
     nativeBuildInputs = [
       final.dhall
