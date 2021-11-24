@@ -22,16 +22,22 @@
     in
 
     {
-      # A Nixpkgs overlay.
+      # A Nixpkgs overlay.  This contains the purescript2nix function that
+      # end-users will want to use.
       overlay = import ./nix/overlay.nix;
 
       packages = forAllSystems (system: {
+        # This is just an example purescript package that has been built using
+        # the purescript2nix function.
         inherit (nixpkgsFor.${system}) example-purescript-package;
       });
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
 
       devShells = forAllSystems (system: {
+        # This purescript development shell just contains dhall, purescript,
+        # and spago.  This is convenient for making changes to
+        # ./example-purescript-package. But most users can ignore this.
         inherit (nixpkgsFor.${system}) purescript-dev-shell;
       });
 
