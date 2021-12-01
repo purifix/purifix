@@ -1,6 +1,6 @@
 # purescript2nix
 
-This is a tool for easily building PureScript projects with Nix.
+This is a Nix function for easily building PureScript projects with Nix.
 
 The advantage of `purescript2nix` is that your `spago.dhall` and
 `packages.dhall` files act as a single source of truth.  When
