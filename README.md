@@ -19,7 +19,7 @@ with `purescript2nix`:
 purescript2nix {
   pname = "example-purescript-package";
   src = ./example-purescript-package;
-};
+}
 ```
 
 ## Installing / Getting `purescript2nix`
