@@ -1,9 +1,12 @@
 {
   description = "Tool for building PureScript projects with Nix";
 
-  # This is the code from
-  # https://github.com/NixOS/nixpkgs/pull/144076
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs?ref=dhallDirectoryToNix";
+  # The Nixpkgs checkout needs to include
+  # https://github.com/NixOS/nixpkgs/pull/144076, or commit
+  # bcfed07a3d30470143a2cae4c55ab952495ffe2f because that
+  # code is used in purescript2nix.  This should be a version of Nixpkgs master
+  # after 2021-12-08 or so.
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
   outputs = { self, nixpkgs }:
     let
