@@ -3,7 +3,7 @@ final: prev: {
   # This is the purescript2nix function.  This makes it easy to build a
   # PureScript package with Nix.  This is the main function provided by this
   # repo.
-  purescript2nix = final.callPackage ./build-support/purescript2nix {};
+  purescript2nix = final.callPackage ./build-support/purescript2nix { };
 
   # This is an example PureScript package that has been built by the
   # purescript2nix function.

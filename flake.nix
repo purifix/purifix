@@ -8,7 +8,13 @@
   # after 2021-12-08 or so.
   inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
-  outputs = { self, nixpkgs }:
+  inputs.registry.url = "github:purescript/registry";
+  inputs.registry.flake = false;
+
+  inputs.registry-index.url = "github:purescript/registry-index";
+  inputs.registry-index.flake = false;
+
+  outputs = { self, nixpkgs, registry, registry-index }:
     let
       # System types to support.
       supportedSystems = [
@@ -20,7 +26,7 @@
       forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
 
       # Nixpkgs instantiated for supported system types.
-      nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; overlays = [ self.overlay ]; });
+      nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; overlays = [ self.overlay self.overlays.registry-package ]; });
 
     in
 
@@ -28,11 +34,23 @@
       # A Nixpkgs overlay.  This contains the purescript2nix function that
       # end-users will want to use.
       overlay = import ./nix/overlay.nix;
+      overlays = {
+        registry-package = final: prev: {
+          example-registry-package = final.purescript2nix {
+            pname = "example-registry-package";
+            version = "0.0.1";
+            src = ./example-registry-package;
+            format = "registry";
+            inherit registry;
+            inherit registry-index;
+          };
+        };
+      };
 
       packages = forAllSystems (system: {
         # This is just an example purescript package that has been built using
         # the purescript2nix function.
-        inherit (nixpkgsFor.${system}) example-purescript-package;
+        inherit (nixpkgsFor.${system}) example-purescript-package example-registry-package;
       });
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);

@@ -1,0 +1,6 @@
+package:
+  name: "example-purescript-package"
+  dependencies: [ "console", "effect", "foldable-traversable", "prelude", "psci-support" ]
+workspace:
+  set:
+    registry: 0.0.2
