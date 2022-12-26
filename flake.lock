@@ -15,14 +15,14 @@
         "type": "github"
       }
     },
-    "registry": {
+    "purescript-registry": {
       "flake": false,
       "locked": {
-        "lastModified": 1671849118,
-        "narHash": "sha256-q5r2J5pQhCAA+5YAu9CQokJ2KCh0FIVwjMxlJYDtooo=",
+        "lastModified": 1672067897,
+        "narHash": "sha256-9MtdAoPvUIRsMyY3nnVyFtjUwjGyan0ELFRR1BVV9tE=",
         "owner": "purescript",
         "repo": "registry",
-        "rev": "f0903d987db42f1ef397b636e76116f8b43a0944",
+        "rev": "a83eadc5d79ac6ca728a66cfe093fa9bfc5ca91e",
         "type": "github"
       },
       "original": {
@@ -31,14 +31,14 @@
         "type": "github"
       }
     },
-    "registry-index": {
+    "purescript-registry-index": {
       "flake": false,
       "locked": {
-        "lastModified": 1671849121,
-        "narHash": "sha256-csZhR2hiEfUIns//le5CbB9+gNT12vNHy2YqBqFZei0=",
+        "lastModified": 1672067900,
+        "narHash": "sha256-oZUfucrvUPCNd8aOWdRLgm3ldsnwyjCw5KO6jRpVK1U=",
         "owner": "purescript",
         "repo": "registry-index",
-        "rev": "c8b3465d6042b701b0a6bb8a4d18164486726b00",
+        "rev": "53da963f7b1ccb8cbd79c2944767efda8c3c664d",
         "type": "github"
       },
       "original": {
@@ -50,8 +50,8 @@
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
-        "registry": "registry",
-        "registry-index": "registry-index"
+        "purescript-registry": "purescript-registry",
+        "purescript-registry-index": "purescript-registry-index"
       }
     }
   },

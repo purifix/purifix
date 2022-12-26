@@ -1,19 +1,14 @@
-final: prev: {
+{ purescript-registry, purescript-registry-index }: final: prev: {
 
   # This is the purescript2nix function.  This makes it easy to build a
   # PureScript package with Nix.  This is the main function provided by this
   # repo.
-  purescript2nix = final.callPackage ./build-support/purescript2nix { };
+  purescript2nix = final.callPackage ./build-support/purescript2nix {
+    inherit purescript-registry purescript-registry-index;
+  };
 
-  # This is an example PureScript package that has been built by the
-  # purescript2nix function.
-  #
-  # This is just a test that purescript2nix actually works, as well an example
-  # that end users can base their own code off of.
-  example-purescript-package = final.purescript2nix {
-    pname = "example-purescript-package";
-    version = "0.0.1";
-    src = ../example-purescript-package;
+  example-registry-package = final.purescript2nix {
+    src = ../example-registry-package;
   };
 
   # This is a simple develpoment shell with purescript and spago.  This can be

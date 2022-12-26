@@ -1,20 +1,15 @@
 {
   description = "Tool for building PureScript projects with Nix";
 
-  # The Nixpkgs checkout needs to include
-  # https://github.com/NixOS/nixpkgs/pull/144076, or commit
-  # bcfed07a3d30470143a2cae4c55ab952495ffe2f because that
-  # code is used in purescript2nix.  This should be a version of Nixpkgs master
-  # after 2021-12-08 or so.
   inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
-  inputs.registry.url = "github:purescript/registry";
-  inputs.registry.flake = false;
+  inputs.purescript-registry.url = "github:purescript/registry";
+  inputs.purescript-registry.flake = false;
 
-  inputs.registry-index.url = "github:purescript/registry-index";
-  inputs.registry-index.flake = false;
+  inputs.purescript-registry-index.url = "github:purescript/registry-index";
+  inputs.purescript-registry-index.flake = false;
 
-  outputs = { self, nixpkgs, registry, registry-index }:
+  outputs = { self, nixpkgs, purescript-registry, purescript-registry-index }:
     let
       # System types to support.
       supportedSystems = [
@@ -26,25 +21,15 @@
       forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
 
       # Nixpkgs instantiated for supported system types.
-      nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; overlays = [ self.overlay self.overlays.registry-package ]; });
+      nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; overlays = [ self.overlay ]; });
 
     in
 
     {
       # A Nixpkgs overlay.  This contains the purescript2nix function that
       # end-users will want to use.
-      overlay = import ./nix/overlay.nix;
-      overlays = {
-        registry-package = final: prev: {
-          example-registry-package = final.purescript2nix {
-            pname = "example-registry-package";
-            version = "0.0.1";
-            src = ./example-registry-package;
-            format = "registry";
-            inherit registry;
-            inherit registry-index;
-          };
-        };
+      overlay = import ./nix/overlay.nix {
+        inherit purescript-registry purescript-registry-index;
       };
 
       packages = forAllSystems (system: {
