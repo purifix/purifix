@@ -2,40 +2,61 @@
 
 This is a Nix function for easily building PureScript projects with Nix.
 
-The advantage of `purescript2nix` is that your `spago.dhall` and
-`packages.dhall` files act as a single source of truth.  When
-you update dependencies in `spago.dhall` or the package set in
-`packages.dhall`, you don't need to update the Nix expression
-at all.  It automatically picks up changes from these two
-Dhall files.
+The advantage of `purescript2nix` is that your `spago.yaml` and file act as a
+single source of truth.  When you update dependencies in `spago.yaml` you don't
+need to update the Nix expression at all.  It automatically picks up changes
+from the YAML file.
 
 Using `purescript2nix` on a PureScript packages looks like the
 following. This is how you would build the PureScript package
-[`./example-purescript-package/`](./example-purescript-package/)
+[`./example-registry-package/`](./example-registry-package/)
 with `purescript2nix`:
 
 
 ```nix
-purescript2nix {
-  pname = "example-purescript-package";
+purescript2nix.build {
   src = ./example-purescript-package;
 }
 ```
 
 ## Installing / Getting `purescript2nix`
 
-The `purescript2nix` function lives in this repo, so I would recommend either
-adding `purescript2nix` as a flake input and using the provided overlay, or
-just directly importing the `purescript2nix` repo and applying
-[`./nix/overlay.nix`](./nix/overlay.nix).
+The `purescript2nix` function lives in this repo, and the recommend installation procedure is to include this flake and add the exported overlay to overlays when importing nixpkgs.
 
-## Using the `purescript2nix` function
+A simple package could be installed in a flake.nix file like below:
 
-Using the `purescript2nix` function to build your package is as simple as
-calling it with `pname` and `src` arguments.  See either the above example, or
-the `example-purescript-package` attribute in
-[`./nix/overlay.nix`](./nix/overlay.nix) and the
-[example PureScript package](./example-purescript-package/).
+```nix
+{
+  inputs = {
+    nixpkgs = {
+      url = "github:NixOS/nixpkgs";
+    };
+    purescript2nix = {
+      url = "github:considerate/purescript2nix";
+    };
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+    };
+  };
+  outputs = inputs:
+    inputs.flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import inputs.nixpkgs {
+          inherit system;
+          overlays = [ inputs.purescript2nix.overlay ];
+        };
+        my-package = pkgs.purescript2nix.build {
+          src = ./.;
+        };
+      in
+      {
+        packages = {
+          default = my-package;
+        };
+        defaultPackage = my-package;
+      });
+}
+```
 
 ## Building the derivation produced by `purescript2nix`
 
@@ -71,13 +92,3 @@ $ tree /nix/store/z3gvwhpnp0rfi65dgxmk1rjycpa4l1ag-example-purescript-package
     │   ├── foreign.js
 ...
 ```
-
-## Caveats
-
-One big problem with `purescript2nix` is that it requires a package set with
-hashes.  The `purescript/package-sets` repo does not include hashes for
-packages in the package set.  See
-[#4](https://github.com/cdepillabout/purescript2nix/issues/4) for more info.
-
-Also, you might have problem using `purescript2nix` from flakes.  See
-[#1](https://github.com/cdepillabout/purescript2nix/issues/1) for more info.
