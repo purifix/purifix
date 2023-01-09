@@ -46,17 +46,31 @@ let
       inherit version;
       location = meta.location;
     };
-  readPackageInline = package: meta: {
-    type = "inline";
-    git = meta.git;
-    ref = meta.ref;
-    src = builtins.fetchGit {
-      url = meta.git;
-      # ref = "HEAD";
-      rev = meta.ref; # TODO: is this ok?
-      allRefs = true;
+  readPackageInline = package: meta:
+    let refLength = builtins.stringLength meta.ref;
+    in
+    {
+      type = "inline";
+      git = meta.git;
+      ref = meta.ref;
+      src =
+        if refLength == 40
+        then
+        # Assume the "ref" is a commit hash if it's 40 characters long and use
+        # it as a revision.
+          builtins.fetchGit
+            {
+              url = meta.git;
+              rev = meta.ref;
+              allRefs = true;
+            }
+        else
+        # Use the ref as is and hope that the source is somewhat stable.
+          builtins.fetchGit {
+            url = meta.git;
+            ref = meta.ref;
+          };
     };
-  };
 
 
   readPackage = package: value:
@@ -96,12 +110,19 @@ let
     };
 
   lookupSource = package: meta:
-    let target = fromYAML (builtins.readFile "${meta.src}/spago.yaml");
+    let
+      targetPursJSON = builtins.fromJSON (builtins.readFile "${meta.src}/purs.json");
+      targetSpagoYAML = fromYAML (builtins.readFile "${meta.src}/spago.yaml");
+      toList = x: if builtins.typeOf x == "list" then x else builtins.attrNames x;
+      dependencies =
+        if builtins.pathExists "${meta.src}/purs.json"
+        then toList (targetPursJSON.dependencies or { })
+        else toList (targetSpagoYAML.package.dependencies or [ ]);
     in
     meta // {
       type = "inline";
       pname = package;
-      dependencies = target.package.dependencies or [ ];
+      inherit dependencies;
     };
 
   lookupDeps = package: value:
@@ -113,7 +134,6 @@ let
   # This lookup is required to be done in the separate registry-index repo
   # because the package set metadata in the main repo doesn't contain
   # dependency information.
-  # TODO: Support getting the metadata directly from a git repo
   registryDeps = builtins.mapAttrs lookupDeps registryPackages;
 
   closurePackage = key: {
