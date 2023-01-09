@@ -32,6 +32,8 @@ let
   # Package set version to use from the registry
   registry-version = spagoYamlJSON.workspace.set.registry;
 
+  extra-packages = spagoYamlJSON.workspace.extra_packages or { };
+
   # Parse the package set from the registry at our requested version
   registryPackageSet = builtins.fromJSON (builtins.readFile "${purescript-registry}/package-sets/${registry-version}.json");
 
@@ -39,21 +41,42 @@ let
     let
       meta = builtins.fromJSON (builtins.readFile "${purescript-registry}/metadata/${package}.json");
     in
-    meta.published.${version};
+    meta.published.${version} // {
+      type = "registry";
+      inherit version;
+      location = meta.location;
+    };
+  readPackageInline = package: meta: {
+    type = "inline";
+    git = meta.git;
+    ref = meta.ref;
+    src = builtins.fetchGit {
+      url = meta.git;
+      # ref = "HEAD";
+      rev = meta.ref; # TODO: is this ok?
+      allRefs = true;
+    };
+  };
+
+
+  readPackage = package: value:
+    if builtins.typeOf value == "string"
+    then readPackageByVersion package value
+    else readPackageInline package value;
 
   # Fetch metadata about where to download each package in the package set as
   # well as the hash for the tarball to download.
-  # TODO: allow for fetching package from git specification
-  basePackages = builtins.mapAttrs readPackageByVersion registryPackageSet.packages;
+  basePackages = builtins.mapAttrs readPackage registryPackageSet.packages;
+  extraPackages = builtins.mapAttrs readPackage extra-packages;
 
-  # TODO: extend basePackages with extra_packages from the spago.yaml file
-  registryPackages = basePackages;
+  registryPackages = basePackages // extraPackages;
 
   # Lookup metadata in the registry-index by finding the line-separated JSON
   # manifest file in the repo matching the package and filtering out the object
   # matching the required version.
-  lookupIndex = package: version:
+  lookupIndex = package: value:
     let
+      version = value.version;
       l = builtins.stringLength package;
       path =
         if l == 2 then "2/${package}"
@@ -65,18 +88,33 @@ let
         buildPhase = ''${jq}/bin/jq -s '.[] | select (.version == "${version}")' < "${purescript-registry-index}/${path}" > $out '';
       }));
     in
-    registryPackages.${package} // {
+    value // {
+      type = "registry";
       inherit version;
       pname = package;
       dependencies = builtins.attrNames meta.dependencies;
     };
+
+  lookupSource = package: meta:
+    let target = fromYAML (builtins.readFile "${meta.src}/spago.yaml");
+    in
+    meta // {
+      type = "inline";
+      pname = package;
+      dependencies = target.package.dependencies or [ ];
+    };
+
+  lookupDeps = package: value:
+    if value.type == "registry"
+    then lookupIndex package value
+    else lookupSource package value;
 
   # Fetch list of dependencies for each package in the package set.
   # This lookup is required to be done in the separate registry-index repo
   # because the package set metadata in the main repo doesn't contain
   # dependency information.
   # TODO: Support getting the metadata directly from a git repo
-  registryDeps = builtins.mapAttrs lookupIndex registryPackageSet.packages;
+  registryDeps = builtins.mapAttrs lookupDeps registryPackages;
 
   closurePackage = key: {
     key = key;
@@ -92,7 +130,7 @@ let
 
   # This is not fetchTarball because the hashes in the registry refer to the
   # tarball itself not its extracted content.
-  fetchPackage = { pname, version, url, hash, ... }:
+  fetchPackageTarball = { pname, version, url, hash, ... }:
     stdenv.mkDerivation {
       inherit pname version;
 
@@ -105,6 +143,11 @@ let
         cp -R . "$out"
       '';
     };
+
+  fetchPackage = value:
+    if value.type == "inline"
+    then value.src
+    else fetchPackageTarball value;
 
   # Packages are a flattened version of the closure.
   packages = map
