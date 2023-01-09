@@ -2,6 +2,8 @@ package:
   name: example-purescript-package
   version: 0.0.1
   dependencies: [ "console", "effect", "foldable-traversable", "prelude", "psci-support", "registry-dev", "dodo-printer" ]
+  test:
+    dependencies: []
 workspace:
   set:
     registry: 0.0.2

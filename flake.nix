@@ -23,6 +23,10 @@
       # Nixpkgs instantiated for supported system types.
       nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; overlays = [ self.overlay ]; });
 
+      # This is a simple develpoment shell with purescript and spago.  This can be
+      # used for building the ../example-purescript-package repo using purs and
+      # spago.
+
     in
 
     {
@@ -33,9 +37,12 @@
       };
 
       packages = forAllSystems (system: {
-        # This is just an example purescript package that has been built using
-        # the purescript2nix function.
-        inherit (nixpkgsFor.${system}) example-purescript-package example-registry-package;
+        example-registry-package = nixpkgsFor.${system}.purescript2nix.build {
+          src = ./example-registry-package;
+        };
+        example-registry-package-test = nixpkgsFor.${system}.purescript2nix.test {
+          src = ./example-registry-package;
+        };
       });
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
@@ -44,7 +51,9 @@
         # This purescript development shell just contains dhall, purescript,
         # and spago.  This is convenient for making changes to
         # ./example-purescript-package. But most users can ignore this.
-        inherit (nixpkgsFor.${system}) purescript-dev-shell;
+        purescript-dev-shell = nixpkgsFor.${system}.purescript2nix.develop {
+          src = ./example-registry-package;
+        };
       });
 
       devShell = forAllSystems (system: self.devShells.${system}.purescript-dev-shell);
