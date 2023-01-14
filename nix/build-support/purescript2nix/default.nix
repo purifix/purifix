@@ -17,7 +17,8 @@ let
       #
       # Example: ./some/path/to/purescript-strings
       src
-    , spagoYaml ? "${src}/spago.yaml"
+    , subdir ? ""
+    , spagoYaml ? "${src}/${subdir}/spago.yaml"
     }:
     let
       # Parse text containing YAML content into a nix expression.
@@ -51,30 +52,65 @@ let
           location = meta.location;
         };
       readPackageInline = package: meta:
-        let refLength = builtins.stringLength meta.ref;
-        in
-        {
-          type = "inline";
-          git = meta.git;
-          ref = meta.ref;
-          src =
-            if refLength == 40
-            then
-            # Assume the "ref" is a commit hash if it's 40 characters long and use
-            # it as a revision.
-              builtins.fetchGit
-                {
-                  url = meta.git;
-                  rev = meta.ref;
-                  allRefs = true;
-                }
-            else
-            # Use the ref as is and hope that the source is somewhat stable.
-              builtins.fetchGit {
-                url = meta.git;
+        let
+          refLength = builtins.stringLength meta.ref;
+          packageConfig = {
+            git =
+              let repo =
+                if refLength == 40
+                then
+                # Assume the "ref" is a commit hash if it's 40 characters long and use
+                # it as a revision.
+                  builtins.fetchGit
+                    {
+                      url = meta.git;
+                      rev = meta.ref;
+                      allRefs = true;
+                    }
+                else
+                # Use the ref as is and hope that the source is somewhat stable.
+                  builtins.fetchGit {
+                    url = meta.git;
+                    ref = meta.ref;
+                  };
+              in
+              {
+                type = "inline";
+                git = meta.git;
                 ref = meta.ref;
+                src =
+                  if builtins.hasAttr "subdir" meta
+                  then "${repo}/${meta.subdir}"
+                  else repo;
               };
-        };
+            local =
+              let
+                absolute = builtins.substring 0 1 meta.path == "/";
+                # Getting relative path is somewhat tricky because nix doesn't
+                # support .. in what they call subpaths (the string appended to
+                # the path).
+                # We work around this limitation by using IFD and the `realpath` command.
+                relative-path = builtins.readFile (stdenv.mkDerivation {
+                  name = "get-relative-path-${package}";
+                  phases = [ "installPhase" ];
+                  installPhase = ''
+                    realpath --relative-to="${src}" "${src}/${subdir}/${meta.path}" | tr -d '\n' > $out
+                  '';
+                });
+              in
+              {
+                type = "inline";
+                src =
+                  if absolute then /. + meta.path
+                  else src + "/${relative-path}";
+              };
+          };
+          package-type =
+            if builtins.hasAttr "path" meta then "local"
+            else if builtins.hasAttr "git" meta then "git"
+            else builtins.throw "Cannot parse extra package ${package} with meta ${toString meta}";
+        in
+        packageConfig.${package-type};
 
 
       readPackage = package: value:
@@ -197,13 +233,14 @@ let
         spagoYamlJSON
         ;
       compiler-version = registryPackageSet.compiler;
+      package-src = src + "/${subdir}";
     };
 
 in
 {
   build = args:
     let
-      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version;
+      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version package-src;
 
       # Generate the list of source globs as <package>/src/**/*.purs for each
       # downloaded package in the closure.
@@ -217,7 +254,7 @@ in
       builtPureScriptCode = stdenv.mkDerivation {
         pname = spagoYamlJSON.package.name;
         version = spagoYamlJSON.package.version;
-        src = args.src;
+        src = package-src;
 
         nativeBuildInputs = [
           compiler
@@ -233,14 +270,14 @@ in
     builtPureScriptCode;
   test = args:
     let
-      inherit (getRegistrySources args) testSources spagoYamlJSON compiler-version;
+      inherit (getRegistrySources args) testSources spagoYamlJSON compiler-version package-src;
       registrySourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') testSources;
       testMain = spagoYamlJSON.package.test.main or "Test.Main";
       compiler = purescript2nix-compiler compiler-version;
     in
     stdenv.mkDerivation {
       name = "test-${spagoYamlJSON.package.name}";
-      src = args.src;
+      src = package-src;
       buildInputs = [
         compiler
         nodejs

@@ -40,10 +40,12 @@
 
       packages = forAllSystems (system: {
         example-registry-package = nixpkgsFor.${system}.purescript2nix.build {
-          src = ./example-registry-package;
+          subdir = "example-registry-package";
+          src = ./.;
         };
         example-registry-package-test = nixpkgsFor.${system}.purescript2nix.test {
-          src = ./example-registry-package;
+          subdir = "example-registry-package";
+          src = ./.;
         };
       });
 
@@ -54,7 +56,8 @@
         # and spago.  This is convenient for making changes to
         # ./example-purescript-package. But most users can ignore this.
         purescript-dev-shell = nixpkgsFor.${system}.purescript2nix.develop {
-          src = ./example-registry-package;
+          subdir = "example-registry-package";
+          src = ./.;
         };
       });
 
