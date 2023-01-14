@@ -32,7 +32,7 @@ A simple package could be installed in a flake.nix file like below:
       url = "github:NixOS/nixpkgs";
     };
     purescript2nix = {
-      url = "github:considerate/purescript2nix";
+      url = "github:cdepillabout/purescript2nix";
     };
     flake-utils = {
       url = "github:numtide/flake-utils";
