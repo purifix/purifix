@@ -8,8 +8,10 @@
 
   inputs.purescript-registry-index.url = "github:purescript/registry-index";
   inputs.purescript-registry-index.flake = false;
+  inputs.easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
+  inputs.easy-purescript-nix.flake = false;
 
-  outputs = { self, nixpkgs, purescript-registry, purescript-registry-index }:
+  outputs = { self, nixpkgs, purescript-registry, purescript-registry-index, easy-purescript-nix }:
     let
       # System types to support.
       supportedSystems = [
@@ -33,7 +35,7 @@
       # A Nixpkgs overlay.  This contains the purescript2nix function that
       # end-users will want to use.
       overlay = import ./nix/overlay.nix {
-        inherit purescript-registry purescript-registry-index;
+        inherit purescript-registry purescript-registry-index easy-purescript-nix;
       };
 
       packages = forAllSystems (system: {

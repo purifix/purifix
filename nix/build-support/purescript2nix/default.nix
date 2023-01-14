@@ -1,10 +1,10 @@
-{ purescript
-, stdenv
+{ stdenv
 , yaml2json
 , jq
 , fetchurl
 , purescript-registry
 , purescript-registry-index
+, purescript2nix-compiler
 , writeShellScriptBin
 , nodejs
 }:
@@ -196,29 +196,31 @@ let
         testSources
         spagoYamlJSON
         ;
+      compiler-version = registryPackageSet.compiler;
     };
 
 in
 {
   build = args:
     let
-      inherit (getRegistrySources args) buildSources spagoYamlJSON;
+      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version;
 
       # Generate the list of source globs as <package>/src/**/*.purs for each
       # downloaded package in the closure.
       registrySourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') buildSources;
 
+      compiler = purescript2nix-compiler compiler-version;
+
 
       # Compile the main package by passing the source globs for each package in
       # the dependency closure as well as the sources in the main package.
-      # TODO: pick purescript compiler based on package set compiler version (using easy-purescript-nix?)
       builtPureScriptCode = stdenv.mkDerivation {
         pname = spagoYamlJSON.package.name;
         version = spagoYamlJSON.package.version;
         src = args.src;
 
         nativeBuildInputs = [
-          purescript
+          compiler
         ];
 
         installPhase = ''
@@ -231,15 +233,16 @@ in
     builtPureScriptCode;
   test = args:
     let
-      inherit (getRegistrySources args) testSources spagoYamlJSON;
+      inherit (getRegistrySources args) testSources spagoYamlJSON compiler-version;
       registrySourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') testSources;
       testMain = spagoYamlJSON.package.test.main or "Test.Main";
+      compiler = purescript2nix-compiler compiler-version;
     in
     stdenv.mkDerivation {
       name = "test-${spagoYamlJSON.package.name}";
       src = args.src;
       buildInputs = [
-        purescript
+        compiler
         nodejs
       ];
       buildPhase = ''
@@ -252,10 +255,11 @@ in
 
   develop = args:
     let
-      inherit (getRegistrySources args) buildSources spagoYamlJSON;
+      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version;
       # Generate the list of source globs as <package>/src/**/*.purs for each
       # downloaded package in the closure.
       registrySourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') buildSources;
+      compiler = purescript2nix-compiler compiler-version;
       purescript-compile = writeShellScriptBin "purescript-compile" ''
         set -x
         purs compile ${toString registrySourceGlobs} "$@"
@@ -264,7 +268,7 @@ in
     stdenv.mkDerivation {
       name = "develop-${spagoYamlJSON.package.name}";
       buildInputs = [
-        purescript
+        compiler
         purescript-compile
       ];
     };
