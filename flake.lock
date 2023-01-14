@@ -16,6 +16,21 @@
         "type": "github"
       }
     },
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1653893745,
+        "narHash": "sha256-0jntwV3Z8//YwuOjzhV2sgJJPt+HY6KhU7VZUL0fKZQ=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "1ed9fb1935d260de5fe1c2f7ee0ebaae17ed2fa1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1671995294,
@@ -28,6 +43,41 @@
       "original": {
         "owner": "NixOS",
         "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1658371388,
+        "narHash": "sha256-ACjtJNUAqjAdR+o5EDcOGgK3aseB+IF1TSBNPVftdLg=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "af7d2aaa0d7fae44cdef463538833d536e3def1f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "purenix": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1659759527,
+        "narHash": "sha256-4fKtudKLLUUN4vtu4xnPfWXD9wa0qUHLpA9iWIBwOpw=",
+        "owner": "purenix-org",
+        "repo": "purenix",
+        "rev": "5587e599a39811d6d1645e7d2cfed559506e3637",
+        "type": "github"
+      },
+      "original": {
+        "owner": "purenix-org",
+        "repo": "purenix",
         "type": "github"
       }
     },
@@ -67,6 +117,7 @@
       "inputs": {
         "easy-purescript-nix": "easy-purescript-nix",
         "nixpkgs": "nixpkgs",
+        "purenix": "purenix",
         "purescript-registry": "purescript-registry",
         "purescript-registry-index": "purescript-registry-index"
       }
