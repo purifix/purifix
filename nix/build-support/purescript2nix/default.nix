@@ -286,7 +286,7 @@ in
         purs compile ${toString registrySourceGlobs} "$src/test/**/*.purs"
       '';
       installPhase = ''
-        node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" 2>&1 > $out
+        node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
       '';
     };
 
