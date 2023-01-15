@@ -26,12 +26,26 @@ let
     sha256 = flake-lock.nodes.purescript-registry-index.locked.narHash;
   };
 
+  easy-purescript-nix = builtins.fetchTarball {
+    url = "https://github.com/purescript/registry-index/archive/${flake-lock.nodes.easy-purescript-nix.locked.rev}.tar.gz";
+    sha256 = flake-lock.nodes.easy-purescript-nix.locked.narHash;
+  };
+
   overlays = [
-    (import ./overlay.nix { inherit purescript-registry purescript-registry-index; })
+    (import ./overlay.nix { inherit purescript-registry purescript-registry-index easy-purescript-nix; })
   ];
 
   pkgs = import nixpkgs-src { inherit overlays; };
+  example-registry-package = pkgs.purescript2nix.build {
+    subdir = "example-registry-package";
+    src = ../.;
+  };
+  example-registry-package-test = pkgs.purescript2nix.test {
+    subdir = "example-registry-package";
+    src = ../.;
+  };
 
 in
-
-pkgs
+pkgs // {
+  inherit example-registry-package example-registry-package-test;
+}
