@@ -71,6 +71,16 @@
                 registry = "8.6.0";
               };
             };
+            registry-11_1_0 = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+              package-set-config = {
+                registry = "11.1.0";
+              };
+            };
+            built-registry-11_1_0 = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set-built.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+              package-set-config = {
+                registry = "11.1.0";
+              };
+            };
             purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
               package-set-config = {
                 url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";

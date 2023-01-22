@@ -31,17 +31,19 @@ let
 
   fetchPackage = value:
     if value.type == "inline"
-    then value.src
-    else fetchPackageTarball value;
+    then value
+    else value // {
+      src = fetchPackageTarball value;
+    };
 
   # Packages are a flattened version of the closure.
   flatten = { key, package }: package // {
     url = storage-backend package;
   };
-  package-closure = map flatten closure;
+  package-closure = map fetchPackage (map flatten closure);
 
   # Download the source code for each package in the closure.
-  sources = map fetchPackage package-closure;
+  sources = map (pkg: pkg.src) package-closure;
 in
 {
   packages = package-closure;
