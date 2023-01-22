@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "easy-purescript-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1671011575,
+        "narHash": "sha256-tESal32bcqqdZO+aKnBzc1GoL2mtnaDtj2y7ociCRGA=",
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "rev": "11d3bd58ce6e32703bf69cec04dc7c38eabe14ba",
+        "type": "github"
+      },
+      "original": {
+        "owner": "justinwoo",
+        "repo": "easy-purescript-nix",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1671995294,
@@ -49,6 +65,7 @@
     },
     "root": {
       "inputs": {
+        "easy-purescript-nix": "easy-purescript-nix",
         "nixpkgs": "nixpkgs",
         "purescript-registry": "purescript-registry",
         "purescript-registry-index": "purescript-registry-index"
