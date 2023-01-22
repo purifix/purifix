@@ -49,19 +49,19 @@
 
       packages = forAllSystems
         (system: {
-          example-registry-package = nixpkgsFor.${system}.purescript2nix.build {
+          example-registry-package = nixpkgsFor.${system}.purescript2nix {
             subdir = "example-registry-package";
             src = ./.;
           };
-          example-registry-package-test = nixpkgsFor.${system}.purescript2nix.test {
+          example-registry-package-test = (nixpkgsFor.${system}.purescript2nix {
             subdir = "example-registry-package";
             src = ./.;
-          };
+          }).test;
           example-purenix-package =
             let
               pkgs = nixpkgsFor.${system}.extend purenix.overlay;
             in
-            pkgs.purescript2nix.build {
+            pkgs.purescript2nix {
               src = ./example-purenix-package;
               backend = pkgs.purenix;
             };
@@ -73,10 +73,10 @@
         # This purescript development shell just contains dhall, purescript,
         # and spago.  This is convenient for making changes to
         # ./example-purescript-package. But most users can ignore this.
-        purescript-dev-shell = nixpkgsFor.${system}.purescript2nix.develop {
+        purescript-dev-shell = (nixpkgsFor.${system}.purescript2nix {
           subdir = "example-registry-package";
           src = ./.;
-        };
+        }).develop;
       });
 
       devShell = forAllSystems (system: self.devShells.${system}.purescript-dev-shell);
