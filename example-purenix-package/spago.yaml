@@ -9,5 +9,5 @@ package:
     - contravariant
 workspace:
   set:
-    url: https://raw.githubusercontent.com/considerate/purenix-package-sets/5f3cb2e8d7e351830e50417f5d9db9a3ac7bd077/package-sets/0.0.1.json
-    hash: sha256-RFB601hv0dPRQpHBYRmZB9AHNkEW/nzlJdjZkM9cScw=
+    url: https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json
+    hash: sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=
