@@ -1,7 +1,7 @@
 package:
   name: example-purescript-package
   version: 0.0.1
-  dependencies: [ "console", "effect", "foldable-traversable", "prelude", "psci-support", "registry-dev", "dodo-printer" ]
+  dependencies: [ "console", "effect", "foldable-traversable", "prelude", "psci-support", "registry-dev", "dodo-printer", "example-dependency" ]
   test:
     dependencies: []
 workspace:
@@ -12,3 +12,6 @@ workspace:
     registry-dev:
       git: https://github.com/purescript/registry-dev.git
       ref: 04364360f1e5a91173f3b88a5e807773dc06aca5
+    example-dependency:
+      path: ../example-dependency
+      # path: /home/considerate/dev/considerate/purescript2nix/example-dependency

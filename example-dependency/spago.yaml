@@ -1,0 +1,4 @@
+package:
+  name: example-dependency
+  version: 0.0.1
+  dependencies: [ "console", "effect", "foldable-traversable", "prelude", "psci-support", "registry-dev", "dodo-printer" ]
