@@ -7,6 +7,7 @@
 , purescript2nix-compiler
 , writeShellScriptBin
 , nodejs
+, lib
 }:
 
 let
@@ -19,6 +20,8 @@ let
       src
     , subdir ? ""
     , spagoYaml ? "${src}/${subdir}/spago.yaml"
+    , backend ? null
+    , backendCommand ? lib.optionalString (backend != null) "${backend}/bin/${backend.pname}"
     }:
     let
       # Parse text containing YAML content into a nix expression.
@@ -231,23 +234,24 @@ let
         buildSources
         testSources
         spagoYamlJSON
+        backendCommand
         ;
       compiler-version = registryPackageSet.compiler;
       package-src = src + "/${subdir}";
+      codegen = if backend == null then "js" else "corefn";
     };
 
 in
 {
   build = args:
     let
-      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version package-src;
+      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version package-src codegen backendCommand;
 
       # Generate the list of source globs as <package>/src/**/*.purs for each
       # downloaded package in the closure.
       registrySourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') buildSources;
 
       compiler = purescript2nix-compiler compiler-version;
-
 
       # Compile the main package by passing the source globs for each package in
       # the dependency closure as well as the sources in the main package.
@@ -263,7 +267,8 @@ in
         installPhase = ''
           mkdir -p "$out"
           cd "$out"
-          purs compile ${toString registrySourceGlobs} "$src/src/**/*.purs"
+          purs compile --codegen ${codegen} ${toString registrySourceGlobs} "$src/src/**/*.purs"
+          ${backendCommand}
         '';
       };
     in
@@ -274,6 +279,7 @@ in
       registrySourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') testSources;
       testMain = spagoYamlJSON.package.test.main or "Test.Main";
       compiler = purescript2nix-compiler compiler-version;
+      # TODO: figure out how to run tests with other backends, js only for now
     in
     stdenv.mkDerivation {
       name = "test-${spagoYamlJSON.package.name}";
@@ -286,20 +292,21 @@ in
         purs compile ${toString registrySourceGlobs} "$src/test/**/*.purs"
       '';
       installPhase = ''
-        node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" 2>&1 > $out
+        node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
       '';
     };
 
   develop = args:
     let
-      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version;
+      inherit (getRegistrySources args) buildSources spagoYamlJSON compiler-version codegen backendCommand;
       # Generate the list of source globs as <package>/src/**/*.purs for each
       # downloaded package in the closure.
       registrySourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') buildSources;
       compiler = purescript2nix-compiler compiler-version;
       purescript-compile = writeShellScriptBin "purescript-compile" ''
         set -x
-        purs compile ${toString registrySourceGlobs} "$@"
+        purs compile --codegen ${codegen} ${toString registrySourceGlobs} "$@"
+        ${backendCommand}
       '';
     in
     stdenv.mkDerivation {

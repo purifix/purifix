@@ -11,7 +11,16 @@
   inputs.easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
   inputs.easy-purescript-nix.flake = false;
 
-  outputs = { self, nixpkgs, purescript-registry, purescript-registry-index, easy-purescript-nix }:
+  inputs.purenix.url = "github:purenix-org/purenix";
+
+  outputs =
+    { self
+    , nixpkgs
+    , purescript-registry
+    , purescript-registry-index
+    , easy-purescript-nix
+    , purenix
+    }:
     let
       # System types to support.
       supportedSystems = [
@@ -38,16 +47,25 @@
         inherit purescript-registry purescript-registry-index easy-purescript-nix;
       };
 
-      packages = forAllSystems (system: {
-        example-registry-package = nixpkgsFor.${system}.purescript2nix.build {
-          subdir = "example-registry-package";
-          src = ./.;
-        };
-        example-registry-package-test = nixpkgsFor.${system}.purescript2nix.test {
-          subdir = "example-registry-package";
-          src = ./.;
-        };
-      });
+      packages = forAllSystems
+        (system: {
+          example-registry-package = nixpkgsFor.${system}.purescript2nix.build {
+            subdir = "example-registry-package";
+            src = ./.;
+          };
+          example-registry-package-test = nixpkgsFor.${system}.purescript2nix.test {
+            subdir = "example-registry-package";
+            src = ./.;
+          };
+          example-purenix-package =
+            let
+              pkgs = nixpkgsFor.${system}.extend purenix.overlay;
+            in
+            pkgs.purescript2nix.build {
+              src = ./example-purenix-package;
+              backend = pkgs.purenix;
+            };
+        });
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
 

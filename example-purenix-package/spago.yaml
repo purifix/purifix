@@ -1,0 +1,7 @@
+package:
+  name: example-purenix-package
+  version: 0.0.1
+  dependencies: []
+workspace:
+  set:
+    registry: 8.6.0

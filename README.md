@@ -2,7 +2,7 @@
 
 This is a Nix function for easily building PureScript projects with Nix.
 
-The advantage of `purescript2nix` is that your `spago.yaml` and file act as a
+The advantage of `purescript2nix` is that your `spago.yaml` file act as a
 single source of truth.  When you update dependencies in `spago.yaml` you don't
 need to update the Nix expression at all.  It automatically picks up changes
 from the YAML file.
@@ -65,7 +65,7 @@ Building the derivation produced by `purescript2nix` is as simple as calling
 in this repo:
 
 ```console
-$ nix-build ./nix -A example-purescript-package
+$ nix-build ./nix -A example-registry-package
 ...
 /nix/store/z3gvwhpnp0rfi65dgxmk1rjycpa4l1ag-example-purescript-package
 ```
