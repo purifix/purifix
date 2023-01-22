@@ -37,13 +37,22 @@ let
       # support extra_packages.
       spagoYamlJSON = fromYAML (builtins.readFile spagoYaml);
 
+      package-set-config = spagoYaml.workspace.package_set or spagoYamlJSON.workspace.set;
+
       # Package set version to use from the registry
-      registry-version = spagoYamlJSON.workspace.set.registry;
+      registry-version = package-set-config.registry;
 
       extra-packages = spagoYamlJSON.workspace.extra_packages or { };
 
       # Parse the package set from the registry at our requested version
-      registryPackageSet = builtins.fromJSON (builtins.readFile "${purescript-registry}/package-sets/${registry-version}.json");
+      package-set-file =
+        if builtins.hasAttr "registry" package-set-config
+        then "${purescript-registry}/package-sets/${registry-version}.json"
+        else
+          fetchurl {
+            inherit (package-set-config) url hash;
+          };
+      registryPackageSet = builtins.fromJSON (builtins.readFile package-set-file);
 
       readPackageByVersion = package: version:
         let
@@ -85,6 +94,8 @@ let
                   if builtins.hasAttr "subdir" meta
                   then "${repo}/${meta.subdir}"
                   else repo;
+              } // lib.optionalAttrs (builtins.hasAttr "dependencies" meta) {
+                inherit (meta) dependencies;
               };
             local =
               let
@@ -106,6 +117,8 @@ let
                 src =
                   if absolute then /. + meta.path
                   else src + "/${relative-path}";
+              } // lib.optionalAttrs (builtins.hasAttr "dependencies" meta) {
+                inherit (meta) dependencies;
               };
           };
           package-type =
@@ -169,9 +182,12 @@ let
         };
 
       lookupDeps = package: value:
-        if value.type == "registry"
-        then lookupIndex package value
-        else lookupSource package value;
+        if builtins.hasAttr "dependencies" value
+        then value # don't lookup dependencies if they are already declared
+        else
+          if value.type == "registry"
+          then lookupIndex package value
+          else lookupSource package value;
 
       # Fetch list of dependencies for each package in the package set.
       # This lookup is required to be done in the separate registry-index repo

@@ -1,7 +1,13 @@
 package:
   name: example-purenix-package
   version: 0.0.1
-  dependencies: []
+  dependencies:
+    - prelude
+    - unfoldable
+    - nonempty
+    - arrays
+    - contravariant
 workspace:
   set:
-    registry: 8.6.0
+    url: https://raw.githubusercontent.com/considerate/purenix-package-sets/5f3cb2e8d7e351830e50417f5d9db9a3ac7bd077/package-sets/0.0.1.json
+    hash: sha256-RFB601hv0dPRQpHBYRmZB9AHNkEW/nzlJdjZkM9cScw=
