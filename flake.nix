@@ -47,24 +47,30 @@
         inherit purescript-registry purescript-registry-index easy-purescript-nix;
       };
 
-      packages = forAllSystems
-        (system: {
-          example-registry-package = nixpkgsFor.${system}.purescript2nix {
+      packages = forAllSystems (system:
+        let
+          pkgs = nixpkgsFor.${system};
+          fromYAML = pkgs.callPackage ./nix/build-support/purescript2nix/from-yaml.nix { };
+        in
+        {
+          example-registry-package = pkgs.purescript2nix {
             subdir = "example-registry-package";
             src = ./.;
           };
-          example-registry-package-test = (nixpkgsFor.${system}.purescript2nix {
+          example-registry-package-test = (pkgs.purescript2nix {
             subdir = "example-registry-package";
             src = ./.;
           }).test;
           example-purenix-package =
-            let
-              pkgs = nixpkgsFor.${system}.extend purenix.overlay;
-            in
-            pkgs.purescript2nix {
+            (pkgs.extend purenix.overlay).purescript2nix {
               src = ./example-purenix-package;
               backend = pkgs.purenix;
             };
+          registry-8_6 = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+            package-set-config = {
+              registry = "8.6.0";
+            };
+          };
         });
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
