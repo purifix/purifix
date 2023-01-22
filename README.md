@@ -14,7 +14,7 @@ with `purescript2nix`:
 
 
 ```nix
-purescript2nix.build {
+purescript2nix {
   src = ./example-purescript-package;
 }
 ```
@@ -45,7 +45,7 @@ A simple package could be installed in a flake.nix file like below:
           inherit system;
           overlays = [ inputs.purescript2nix.overlay ];
         };
-        my-package = pkgs.purescript2nix.build {
+        my-package = pkgs.purescript2nix {
           src = ./.;
         };
       in
