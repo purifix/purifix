@@ -48,24 +48,36 @@
       };
 
       packages = forAllSystems
-        (system: {
-          example-registry-package = nixpkgsFor.${system}.purescript2nix.build {
-            subdir = "example-registry-package";
-            src = ./.;
-          };
-          example-registry-package-test = nixpkgsFor.${system}.purescript2nix.test {
-            subdir = "example-registry-package";
-            src = ./.;
-          };
-          example-purenix-package =
-            let
-              pkgs = nixpkgsFor.${system}.extend purenix.overlay;
-            in
-            pkgs.purescript2nix.build {
+        (system:
+          let
+            pkgs = nixpkgsFor.${system};
+            fromYAML = pkgs.callPackage ./nix/build-support/purescript2nix/from-yaml.nix { };
+          in
+          {
+            example-registry-package = pkgs.purescript2nix {
+              subdir = "example-registry-package";
+              src = ./.;
+            };
+            example-registry-package-test = (pkgs.purescript2nix {
+              subdir = "example-registry-package";
+              src = ./.;
+            }).test;
+            example-purenix-package = (pkgs.extend purenix.overlay).purescript2nix {
               src = ./example-purenix-package;
               backend = pkgs.purenix;
             };
-        });
+            registry-8_6 = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+              package-set-config = {
+                registry = "8.6.0";
+              };
+            };
+            purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+              package-set-config = {
+                url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
+                hash = "sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=";
+              };
+            };
+          });
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
 
@@ -73,10 +85,10 @@
         # This purescript development shell just contains dhall, purescript,
         # and spago.  This is convenient for making changes to
         # ./example-purescript-package. But most users can ignore this.
-        purescript-dev-shell = nixpkgsFor.${system}.purescript2nix.develop {
+        purescript-dev-shell = (nixpkgsFor.${system}.purescript2nix {
           subdir = "example-registry-package";
           src = ./.;
-        };
+        }).develop;
       });
 
       devShell = forAllSystems (system: self.devShells.${system}.purescript-dev-shell);

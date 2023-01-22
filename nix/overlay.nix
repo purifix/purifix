@@ -1,7 +1,9 @@
 { purescript-registry, purescript-registry-index, easy-purescript-nix }: final: prev:
-let easy-ps = import easy-purescript-nix {
-  pkgs = final;
-};
+let
+  easy-ps = import easy-purescript-nix {
+    pkgs = final;
+  };
+  fromYAML = final.callPackage ./build-support/purescript2nix/from-yaml.nix { };
 in
 {
 
@@ -13,7 +15,7 @@ in
   # PureScript package with Nix.  This is the main function provided by this
   # repo.
   purescript2nix = final.callPackage ./build-support/purescript2nix {
-    inherit purescript-registry purescript-registry-index;
+    inherit purescript-registry purescript-registry-index fromYAML;
   };
 
 }
