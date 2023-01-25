@@ -55,17 +55,20 @@ let
       ++ spagoYamlJSON.package.dependencies;
   };
 
+  compiler-version = package-set.compiler;
+  compiler = purescript2nix-compiler compiler-version;
+  codegen = if backend == null then "js" else "corefn";
 
-  build-pkgs = builtins.listToAttrs (
-    map
-      (package:
+  make-pkgs = final: inputs:
+    let
+      build-package = package:
         let
-          copyOutput = map (dep: let pkg = build-pkgs.${dep}; in ''${pkg}/output/*'') package.dependencies;
+          copyOutput = map (dep: let pkg = final.${dep}; in ''${pkg}/output/*'') package.dependencies;
           dependency-closure = fetch-sources {
             inherit packages storage-backend;
             dependencies = package.dependencies;
           };
-          caches = map (dep: let pkg = build-pkgs.${dep}; in ''${pkg}/output/cache-db.json'') package.dependencies;
+          caches = map (dep: let pkg = final.${dep}; in ''${pkg}/output/cache-db.json'') package.dependencies;
           globs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') dependency-closure.packages;
           value = stdenv.mkDerivation {
             pname = package.pname;
@@ -89,55 +92,95 @@ let
               mkdir -p "$out"
               cp -r output "$out/"
             '';
+            passthru = {
+              inherit globs caches copyOutput;
+              inherit package;
+            };
           };
         in
         {
           name = package.pname;
           value = value;
-        })
-      (build-closure.packages ++ [{
-        pname = spagoYamlJSON.package.name;
-        version = spagoYamlJSON.package.version;
-        src = src;
-        subdir = subdir;
-        dependencies = spagoYamlJSON.package.dependencies;
-      }])
-  );
+        };
+    in
+    builtins.listToAttrs (map build-package inputs);
+
+  build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [{
+    pname = spagoYamlJSON.package.name;
+    version = spagoYamlJSON.package.version;
+    src = src;
+    subdir = subdir;
+    dependencies = spagoYamlJSON.package.dependencies;
+  }]);
+
+  test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ [{
+    pname = spagoYamlJSON.package.name;
+    version = spagoYamlJSON.package.version;
+    src = src;
+    subdir = subdir;
+    dependencies = spagoYamlJSON.package.test.dependencies ++ spagoYamlJSON.package.dependencies;
+  }]);
 
   buildSources = build-closure.sources;
   testSources = test-closure.sources;
 
-  compiler-version = package-set.compiler;
 
   testSourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') testSources;
   buildSourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') buildSources;
 
-  codegen = if backend == null then "js" else "corefn";
 
   testMain = spagoYamlJSON.package.test.main or "Test.Main";
-  compiler = purescript2nix-compiler compiler-version;
 
-  purescript-compile = writeShellScriptBin "purescript-compile" ''
-    set -x
-    purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$@"
-    ${backendCommand}
-  '';
+  purescript-compile =
+    if incremental then
+      let
+        inherit (build-pkgs.${spagoYamlJSON.package.name}) package caches globs copyOutput;
+      in
+      writeShellScriptBin "purescript-compile" (''
+        mkdir -p output
+      '' + lib.optionalString (builtins.length package.dependencies > 0) ''
+        cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
+        chmod -R +w output
+        ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
+      '' + ''
+        purs compile --codegen ${codegen} ${toString globs} "$@"
+        ${backendCommand}
+      '')
+    else
+      writeShellScriptBin "purescript-compile" ''
+        purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$@"
+        ${backendCommand}
+      '';
 
   # TODO: figure out how to run tests with other backends, js only for now
-  test = stdenv.mkDerivation {
-    name = "test-${spagoYamlJSON.package.name}";
-    src = src + "/${subdir}";
-    buildInputs = [
-      compiler
-      nodejs
-    ];
-    buildPhase = ''
-      purs compile ${toString testSourceGlobs} "$src/test/**/*.purs"
-    '';
-    installPhase = ''
-      node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
-    '';
-  };
+  test =
+    if incremental
+    then
+      test-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
+        (old: {
+          nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ nodejs ];
+          buildPhase = ''
+            purs compile ${toString old.passthru.globs} "${old.passthru.package.src}/${old.passthru.package.subdir or ""}/test/**/*.purs"
+          '';
+          installPhase = ''
+            node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
+          '';
+        })
+    else
+      stdenv.mkDerivation {
+        name = "test-${spagoYamlJSON.package.name}";
+        src = src + "/${subdir}";
+        buildInputs = [
+          compiler
+          nodejs
+        ];
+        buildPhase = ''
+          purs compile ${toString testSourceGlobs} "$src/test/**/*.purs"
+        '';
+        installPhase = ''
+          node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
+        '';
+      };
 
   develop = stdenv.mkDerivation {
     name = "develop-${spagoYamlJSON.package.name}";
@@ -149,7 +192,13 @@ let
 
   build =
     if incremental
-    then build-pkgs.${spagoYamlJSON.package.name}
+    then
+      build-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
+        (old: {
+          passthru = {
+            inherit build test develop;
+          };
+        })
     else
       stdenv.mkDerivation {
         pname = spagoYamlJSON.package.name;
