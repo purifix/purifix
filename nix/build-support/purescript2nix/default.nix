@@ -7,6 +7,7 @@
 , fromYAML
 , purescript-registry
 , purescript-registry-index
+, jq
 }:
 {
   # Source of the input purescript package. Should be a path containing a
@@ -14,6 +15,7 @@
   #
   # Example: ./some/path/to/purescript-strings
   src
+, incremental ? true
 , subdir ? ""
 , spagoYaml ? "${src}/${subdir}/spago.yaml"
 , backend ? null
@@ -39,22 +41,71 @@ let
 
   # Download the source code for each package in the transitive closure
   # of the build dependencies;
-  build-packages = fetch-sources {
+  build-closure = fetch-sources {
     inherit packages storage-backend;
     dependencies = spagoYamlJSON.package.dependencies;
   };
 
   # Download the source code for each package in the transitive closure
   # of the build and test dependencies;
-  test-packages = fetch-sources {
+  test-closure = fetch-sources {
     inherit packages storage-backend;
     dependencies =
       spagoYamlJSON.package.test.dependencies
       ++ spagoYamlJSON.package.dependencies;
   };
 
-  buildSources = build-packages.sources;
-  testSources = test-packages.sources;
+
+  build-pkgs = builtins.listToAttrs (
+    map
+      (package:
+        let
+          copyOutput = map (dep: let pkg = build-pkgs.${dep}; in ''${pkg}/output/*'') package.dependencies;
+          dependency-closure = fetch-sources {
+            inherit packages storage-backend;
+            dependencies = package.dependencies;
+          };
+          caches = map (dep: let pkg = build-pkgs.${dep}; in ''${pkg}/output/cache-db.json'') package.dependencies;
+          globs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') dependency-closure.packages;
+          value = stdenv.mkDerivation {
+            pname = package.pname;
+            version = package.version or "0.0.0";
+            phases = [ "preparePhase" "buildPhase" "installPhase" ];
+            nativeBuildInputs = [
+              compiler
+            ];
+            preparePhase = ''
+              mkdir -p output
+            '' + lib.optionalString (builtins.length package.dependencies > 0) ''
+              cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
+              chmod -R +w output
+              ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
+            '';
+            buildPhase = ''
+              purs compile --codegen ${codegen} ${toString globs} "${package.src}/${package.subdir or ""}/src/**/*.purs"
+              ${backendCommand}
+            '';
+            installPhase = ''
+              mkdir -p "$out"
+              cp -r output "$out/"
+            '';
+          };
+        in
+        {
+          name = package.pname;
+          value = value;
+        })
+      (build-closure.packages ++ [{
+        pname = spagoYamlJSON.package.name;
+        version = spagoYamlJSON.package.version;
+        src = src;
+        subdir = subdir;
+        dependencies = spagoYamlJSON.package.dependencies;
+      }])
+  );
+
+  buildSources = build-closure.sources;
+  testSources = test-closure.sources;
 
   compiler-version = package-set.compiler;
 
@@ -62,7 +113,6 @@ let
   buildSourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') buildSources;
 
   codegen = if backend == null then "js" else "corefn";
-  package-src = src + "/${subdir}";
 
   testMain = spagoYamlJSON.package.test.main or "Test.Main";
   compiler = purescript2nix-compiler compiler-version;
@@ -76,7 +126,7 @@ let
   # TODO: figure out how to run tests with other backends, js only for now
   test = stdenv.mkDerivation {
     name = "test-${spagoYamlJSON.package.name}";
-    src = package-src;
+    src = src + "/${subdir}";
     buildInputs = [
       compiler
       nodejs
@@ -97,24 +147,28 @@ let
     ];
   };
 
-  build = stdenv.mkDerivation {
-    pname = spagoYamlJSON.package.name;
-    version = spagoYamlJSON.package.version;
-    src = package-src;
+  build =
+    if incremental
+    then build-pkgs.${spagoYamlJSON.package.name}
+    else
+      stdenv.mkDerivation {
+        pname = spagoYamlJSON.package.name;
+        version = spagoYamlJSON.package.version;
+        src = src + "/${subdir}";
 
-    nativeBuildInputs = [
-      compiler
-    ];
+        nativeBuildInputs = [
+          compiler
+        ];
 
-    installPhase = ''
-      mkdir -p "$out"
-      cd "$out"
-      purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$src/src/**/*.purs"
-      ${backendCommand}
-    '';
-    passthru = {
-      inherit build test develop;
-    };
-  };
+        installPhase = ''
+          mkdir -p "$out"
+          cd "$out"
+          purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$src/src/**/*.purs"
+          ${backendCommand}
+        '';
+        passthru = {
+          inherit build test develop;
+        };
+      };
 in
 build
