@@ -203,13 +203,15 @@ let
       buildPhase =
         let
           minification = lib.optionalString minify "--minify";
+          module = "${build-pkgs.${spagoYamlJSON.package.name}}/output/Main/index.js";
+          command = "esbuild --bundle --outfile=bundle.js --format=${format}";
         in
         if app
         then ''
-          echo "import {main} from '${build-pkgs.${spagoYamlJSON.package.name}}/output/Main/index.js'; main()" | esbuild --bundle --outfile=bundle.js --format=${format} ${minification}
+          echo "import {main} from '${module}'; main()" | ${command} ${minification}
         ''
         else ''
-          esbuild --bundle --outfile=bundle.js --format=${format} ${build-pkgs.${spagoYamlJSON.package.name}}/output/Main/index.js ${minification}
+          ${command} ${module}
         '';
       installPhase = ''
         mv bundle.js $out
