@@ -8,6 +8,7 @@
 , purescript-registry
 , purescript-registry-index
 , jq
+, esbuild
 }:
 {
   # Source of the input purescript package. Should be a path containing a
@@ -190,13 +191,38 @@ let
     ];
   };
 
+  bundle =
+    { minify ? false
+    , format ? "iife"
+    , app ? false
+    }: stdenv.mkDerivation {
+      name = "bundle-${spagoYamlJSON.package.name}";
+      phases = [ "buildPhase" "installPhase" ];
+      nativeBuildInputs = [ esbuild ];
+      # TODO: make module configurable
+      buildPhase =
+        let
+          minification = lib.optionalString minify "--minify";
+        in
+        if app
+        then ''
+          echo "import {main} from '${build-pkgs.${spagoYamlJSON.package.name}}/output/Main/index.js'; main()" | esbuild --bundle --outfile=bundle.js --format=${format} ${minification}
+        ''
+        else ''
+          esbuild --bundle --outfile=bundle.js --format=${format} ${build-pkgs.${spagoYamlJSON.package.name}}/output/Main/index.js ${minification}
+        '';
+      installPhase = ''
+        mv bundle.js $out
+      '';
+    };
+
   build =
     if incremental
     then
       build-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
         (old: {
           passthru = {
-            inherit build test develop;
+            inherit build test develop bundle;
           };
         })
     else

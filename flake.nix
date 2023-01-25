@@ -62,6 +62,13 @@
               subdir = "example-registry-package";
               src = ./.;
             }).test;
+            example-registry-package-bundle = (pkgs.purescript2nix {
+              subdir = "example-registry-package";
+              src = ./.;
+            }).bundle {
+              app = true;
+              minify = true;
+            };
             example-purenix-package = (pkgs.extend purenix.overlay).purescript2nix {
               src = ./example-purenix-package;
               backend = pkgs.purenix;
