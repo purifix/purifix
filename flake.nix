@@ -63,7 +63,7 @@
                 in
                 {
                   name = "registry-${major}_${minor}_${patch}";
-                  value = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set-built.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+                  value = pkgs.callPackage ./nix/build-support/purescript2nix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
                     package-set-config = {
                       registry = registry-version;
                     };
@@ -94,7 +94,7 @@
               src = ./example-purenix-package;
               backend = pkgs.purenix;
             };
-            purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+            purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
               package-set-config = {
                 url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
                 hash = "sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=";

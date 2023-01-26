@@ -8,6 +8,7 @@
 , purescript-registry
 , purescript-registry-index
 , linkFarm
+, jq
 }:
 { package-set-config
 , extra-packages ? { }
@@ -25,32 +26,23 @@ let
   fetch-sources = callPackage ./fetch-sources.nix { };
   compiler = purescript2nix-compiler package-set.compiler;
   codegen = if backend == null then "js" else "corefn";
-  build-package = name: package:
-    let
-      closure = fetch-sources {
-        inherit packages storage-backend;
-        dependencies = [ name ] ++ package.dependencies;
-      };
-      sources = closure.sources;
-      globs = map (dep: ''"${dep}/src/**/*.purs"'') sources;
-    in
-    stdenv.mkDerivation {
-      pname = name;
-      version = package.version or "0.0.0";
-      phases = [ "buildPhase" "installPhase" ];
-      nativeBuildInputs = [
-        compiler
-      ];
-      buildPhase = ''
-        purs compile --codegen ${codegen} ${toString globs} "$src/src/**/*.purs"
-        ${backendCommand}
-      '';
-      installPhase = ''
-        mkdir -p "$out"
-        cp -r output "$out/"
-      '';
-    };
-  pkgs = builtins.mapAttrs build-package packages;
+  closure = fetch-sources {
+    inherit packages storage-backend;
+    dependencies = builtins.attrNames packages;
+  };
+  make-pkgs = callPackage ./make-package-set.nix { } {
+    inherit storage-backend
+      packages
+      codegen
+      compiler
+      fetch-sources
+      backendCommand;
+  };
+  pkgs = make-pkgs pkgs closure.packages;
   paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;
+  package-set-version =
+    if builtins.hasAttr "registry" package-set-config
+    then package-set-config.registry
+    else package-set-config.git or "unknown";
 in
-linkFarm "package-set" paths
+linkFarm "purescript-registry-${package-set-version}" paths
