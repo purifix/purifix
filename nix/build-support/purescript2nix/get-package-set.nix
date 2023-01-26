@@ -43,32 +43,33 @@ let
       refLength = builtins.stringLength meta.ref;
       packageConfig = {
         git =
-          let repo =
-            if refLength == 40
-            then
-            # Assume the "ref" is a commit hash if it's 40 characters long and use
-            # it as a revision.
-              builtins.fetchGit
-                {
+          let
+            repo =
+              if refLength == 40
+              then
+              # Assume the "ref" is a commit hash if it's 40 characters long and use
+              # it as a revision.
+                builtins.fetchGit
+                  {
+                    url = meta.git;
+                    rev = meta.ref;
+                    allRefs = true;
+                  }
+              else
+              # Use the ref as is and hope that the source is somewhat stable.
+                builtins.fetchGit {
                   url = meta.git;
-                  rev = meta.ref;
-                  allRefs = true;
-                }
-            else
-            # Use the ref as is and hope that the source is somewhat stable.
-              builtins.fetchGit {
-                url = meta.git;
-                ref = meta.ref;
-              };
+                  ref = meta.ref;
+                };
           in
           {
             type = "inline";
             git = meta.git;
             ref = meta.ref;
-            src =
-              if builtins.hasAttr "subdir" meta
-              then "${repo}/${meta.subdir}"
-              else repo;
+            src = repo;
+            pname = package;
+          } // lib.optionalAttrs (builtins.hasAttr "subdir" meta) {
+            subdir = meta.subdir;
           } // lib.optionalAttrs (builtins.hasAttr "dependencies" meta) {
             inherit (meta) dependencies;
           };
@@ -83,7 +84,7 @@ let
               name = "get-relative-path-${package}";
               phases = [ "installPhase" ];
               installPhase = ''
-                realpath --relative-to="${src}" "${src}/${subdir}/${meta.path}" | tr -d '\n' > $out
+                realpath --relative-to="${src}" "${src}/${subdir}/${meta.path}" | tr -d '\n' | tee $out
               '';
             });
           in
@@ -91,7 +92,9 @@ let
             type = "inline";
             src =
               if absolute then /. + meta.path
-              else src + "/${relative-path}";
+              else src;
+          } // lib.optionalAttrs (! absolute) {
+            subdir = relative-path;
           } // lib.optionalAttrs (builtins.hasAttr "dependencies" meta) {
             inherit (meta) dependencies;
           };
@@ -142,11 +145,11 @@ let
 
   lookupSource = package: meta:
     let
-      targetPursJSON = builtins.fromJSON (builtins.readFile "${meta.src}/purs.json");
-      targetSpagoYAML = fromYAML (builtins.readFile "${meta.src}/spago.yaml");
+      targetPursJSON = builtins.fromJSON (builtins.readFile "${meta.src}/${meta.subdir or ""}/purs.json");
+      targetSpagoYAML = fromYAML (builtins.readFile "${meta.src}/${meta.subdir or ""}/spago.yaml");
       toList = x: if builtins.typeOf x == "list" then x else builtins.attrNames x;
       dependencies =
-        if builtins.pathExists "${meta.src}/purs.json"
+        if builtins.pathExists "${meta.src}/${meta.subdir or ""}/purs.json"
         then toList (targetPursJSON.dependencies or { })
         else toList (targetSpagoYAML.package.dependencies or [ ]);
     in
