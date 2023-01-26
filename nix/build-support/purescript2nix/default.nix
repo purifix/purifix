@@ -60,51 +60,10 @@ let
   compiler = purescript2nix-compiler compiler-version;
   codegen = if backend == null then "js" else "corefn";
 
-  make-pkgs = final: inputs:
-    let
-      build-package = package:
-        let
-          copyOutput = map (dep: let pkg = final.${dep}; in ''${pkg}/output/*'') package.dependencies;
-          dependency-closure = fetch-sources {
-            inherit packages storage-backend;
-            dependencies = package.dependencies;
-          };
-          caches = map (dep: let pkg = final.${dep}; in ''${pkg}/output/cache-db.json'') package.dependencies;
-          globs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') dependency-closure.packages;
-          value = stdenv.mkDerivation {
-            pname = package.pname;
-            version = package.version or "0.0.0";
-            phases = [ "preparePhase" "buildPhase" "installPhase" ];
-            nativeBuildInputs = [
-              compiler
-            ];
-            preparePhase = ''
-              mkdir -p output
-            '' + lib.optionalString (builtins.length package.dependencies > 0) ''
-              cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
-              chmod -R +w output
-              ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
-            '';
-            buildPhase = ''
-              purs compile --codegen ${codegen} ${toString globs} "${package.src}/${package.subdir or ""}/src/**/*.purs"
-              ${backendCommand}
-            '';
-            installPhase = ''
-              mkdir -p "$out"
-              cp -r output "$out/"
-            '';
-            passthru = {
-              inherit globs caches copyOutput;
-              inherit package;
-            };
-          };
-        in
-        {
-          name = package.pname;
-          value = value;
-        };
-    in
-    builtins.listToAttrs (map build-package inputs);
+
+  make-pkgs = callPackage ./make-package-set.nix { } {
+    inherit codegen compiler fetch-sources;
+  };
 
   build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [{
     pname = spagoYamlJSON.package.name;
