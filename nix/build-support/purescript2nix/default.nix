@@ -62,7 +62,12 @@ let
 
 
   make-pkgs = callPackage ./make-package-set.nix { } {
-    inherit codegen compiler fetch-sources;
+    inherit storage-backend
+      packages
+      codegen
+      compiler
+      fetch-sources
+      backendCommand;
   };
 
   build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [{

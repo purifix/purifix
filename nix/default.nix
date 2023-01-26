@@ -36,15 +36,12 @@ let
   ];
 
   pkgs = import nixpkgs-src { inherit overlays; };
-  example-registry-package = pkgs.purescript2nix.build {
-    subdir = "example-registry-package";
-    src = ../.;
-  };
-  example-registry-package-test = pkgs.purescript2nix.test {
-    subdir = "example-registry-package";
-    src = ../.;
-  };
 
+  example-registry-package = pkgs.purescript2nix {
+    subdir = "example-registry-package";
+    src = ../.;
+  };
+  example-registry-package-test = example-registry-package.test;
 in
 pkgs // {
   inherit example-registry-package example-registry-package-test;
