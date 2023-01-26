@@ -1,5 +1,7 @@
 name: "Compile Registry Package Sets"
-on: [push, pull_request]
+on:
+  schedule:
+    - cron: '30 19 * * 4'
 jobs:
   compile:
     runs-on: ubuntu-latest
