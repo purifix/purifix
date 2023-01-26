@@ -81,6 +81,8 @@ let
             # the path).
             # We work around this limitation by using IFD and the `realpath` command.
             relative-path = builtins.readFile (stdenv.mkDerivation {
+              preferLocalBuild = true;
+              allowSubstitutes = false;
               name = "get-relative-path-${package}";
               phases = [ "installPhase" ];
               installPhase = ''
@@ -131,6 +133,8 @@ let
         else if l == 3 then "3/${builtins.substring 0 1 package}/${package}"
         else "${builtins.substring 0 2 package}/${builtins.substring 2 2 package}/${package}";
       meta = builtins.fromJSON (builtins.readFile (stdenv.mkDerivation {
+        preferLocalBuild = true;
+        allowSubstitutes = false;
         name = "index-registry-meta-${package}";
         phases = [ "buildPhase" ];
         buildPhase = ''${jq}/bin/jq -s '.[] | select (.version == "${version}")' < "${purescript-registry-index}/${path}" > $out '';

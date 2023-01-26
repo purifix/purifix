@@ -52,8 +52,29 @@
           let
             pkgs = nixpkgsFor.${system};
             fromYAML = pkgs.callPackage ./nix/build-support/purescript2nix/from-yaml.nix { };
+            package-sets = pkgs.lib.filter (v: pkgs.lib.stringLength v > 0) (pkgs.lib.splitString "\n" (builtins.readFile ./package-sets.txt));
+            registry-package-sets = builtins.listToAttrs (map
+              (registry-version:
+                let
+                  parts = pkgs.lib.splitVersion registry-version;
+                  major = builtins.elemAt parts 0;
+                  minor = builtins.elemAt parts 1;
+                  patch = builtins.elemAt parts 2;
+                in
+                {
+                  name = "registry-${major}_${minor}_${patch}";
+                  value = pkgs.callPackage ./nix/build-support/purescript2nix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+                    package-set-config = {
+                      registry = registry-version;
+                    };
+                  };
+                })
+              package-sets);
+            all-package-sets = pkgs.linkFarm "purescript2nix-package-sets" (pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
           in
-          {
+          registry-package-sets // {
+            inherit all-package-sets;
+          } // {
             example-registry-package = pkgs.purescript2nix {
               subdir = "example-registry-package";
               src = ./.;
@@ -73,22 +94,7 @@
               src = ./example-purenix-package;
               backend = pkgs.purenix;
             };
-            registry-8_6 = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
-              package-set-config = {
-                registry = "8.6.0";
-              };
-            };
-            registry-11_1_0 = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
-              package-set-config = {
-                registry = "11.1.0";
-              };
-            };
-            built-registry-11_1_0 = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set-built.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
-              package-set-config = {
-                registry = "11.1.0";
-              };
-            };
-            purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/test-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+            purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
               package-set-config = {
                 url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
                 hash = "sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=";

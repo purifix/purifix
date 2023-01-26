@@ -19,6 +19,9 @@ let
     stdenv.mkDerivation {
       inherit pname version;
 
+      preferLocalBuild = true;
+      allowSubstitutes = false;
+
       src = fetchurl {
         name = "${pname}-${version}.tar.gz";
         inherit url hash;
