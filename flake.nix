@@ -71,22 +71,28 @@
                 })
               package-sets);
             all-package-sets = pkgs.linkFarm "purescript2nix-package-sets" (pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
-          in
-          registry-package-sets // {
-            inherit all-package-sets;
-          } // {
             example-registry-package = pkgs.purescript2nix {
               subdir = "example-registry-package";
               src = ./.;
             };
-            example-registry-package-test = (pkgs.purescript2nix {
+            nonincremental-package = pkgs.purescript2nix {
               subdir = "example-registry-package";
               src = ./.;
-            }).test;
-            example-registry-package-bundle = (pkgs.purescript2nix {
-              subdir = "example-registry-package";
-              src = ./.;
-            }).bundle {
+              incremental = false;
+            };
+          in
+          registry-package-sets // {
+            inherit all-package-sets;
+          } // {
+            inherit example-registry-package;
+            example-registry-package-test = example-registry-package.test;
+            example-registry-package-bundle = example-registry-package.bundle {
+              app = true;
+              minify = true;
+            };
+            inherit nonincremental-package;
+            nonincremental-package-test = nonincremental-package.test;
+            nonincremental-package-bundle = nonincremental-package.bundle {
               app = true;
               minify = true;
             };

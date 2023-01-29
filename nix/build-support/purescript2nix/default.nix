@@ -86,12 +86,12 @@ let
     dependencies = spagoYamlJSON.package.test.dependencies ++ spagoYamlJSON.package.dependencies;
   }]);
 
-  buildSources = build-closure.sources;
-  testSources = test-closure.sources;
+  buildSources = build-closure.packages;
+  testSources = test-closure.packages;
 
 
-  testSourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') testSources;
-  buildSourceGlobs = map (dep: ''"${dep}/src/**/*.purs"'') buildSources;
+  testSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') testSources;
+  buildSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') buildSources;
 
 
   testMain = spagoYamlJSON.package.test.main or "Test.Main";
@@ -155,33 +155,6 @@ let
     ];
   };
 
-  bundle =
-    { minify ? false
-    , format ? "iife"
-    , app ? false
-    }: stdenv.mkDerivation {
-      name = "bundle-${spagoYamlJSON.package.name}";
-      phases = [ "buildPhase" "installPhase" ];
-      nativeBuildInputs = [ esbuild ];
-      # TODO: make module configurable
-      buildPhase =
-        let
-          minification = lib.optionalString minify "--minify";
-          module = "${build-pkgs.${spagoYamlJSON.package.name}}/output/Main/index.js";
-          command = "esbuild --bundle --outfile=bundle.js --format=${format}";
-        in
-        if app
-        then ''
-          echo "import {main} from '${module}'; main()" | ${command} ${minification}
-        ''
-        else ''
-          ${command} ${module}
-        '';
-      installPhase = ''
-        mv bundle.js $out
-      '';
-    };
-
   build =
     if incremental
     then
@@ -195,7 +168,8 @@ let
       stdenv.mkDerivation {
         pname = spagoYamlJSON.package.name;
         version = spagoYamlJSON.package.version;
-        src = src + "/${subdir}";
+
+        inherit src;
 
         nativeBuildInputs = [
           compiler
@@ -204,12 +178,39 @@ let
         installPhase = ''
           mkdir -p "$out"
           cd "$out"
-          purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$src/src/**/*.purs"
+          purs compile --codegen ${codegen} ${toString buildSourceGlobs} "${src}/${subdir}/src/**/*.purs"
           ${backendCommand}
         '';
         passthru = {
-          inherit build test develop;
+          inherit build bundle develop test;
         };
       };
+
+  bundle =
+    { minify ? false
+    , format ? "iife"
+    , app ? false
+    }: stdenv.mkDerivation {
+      name = "bundle-${spagoYamlJSON.package.name}";
+      phases = [ "buildPhase" "installPhase" ];
+      nativeBuildInputs = [ esbuild ];
+      # TODO: make module configurable
+      buildPhase =
+        let
+          minification = lib.optionalString minify "--minify";
+          module = "${build}/output/Main/index.js";
+          command = "esbuild --bundle --outfile=bundle.js --format=${format}";
+        in
+        if app
+        then ''
+          echo "import {main} from '${module}'; main()" | ${command} ${minification}
+        ''
+        else ''
+          ${command} ${module}
+        '';
+      installPhase = ''
+        mv bundle.js $out
+      '';
+    };
 in
 build
