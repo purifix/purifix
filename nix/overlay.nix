@@ -16,6 +16,7 @@ in
   # repo.
   purescript2nix = final.callPackage ./build-support/purescript2nix {
     inherit purescript-registry purescript-registry-index fromYAML;
+    inherit (easy-ps) purescript-language-server;
   };
 
 }
