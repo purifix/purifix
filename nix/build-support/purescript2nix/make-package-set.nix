@@ -5,6 +5,7 @@
 , compiler
 , fetch-sources
 , backendCommand
+, withDocs ? true
 }: final: inputs:
 let
   build-package = package:
@@ -31,7 +32,7 @@ let
           ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
         '';
         buildPhase = ''
-          purs compile --codegen ${codegen} ${toString globs} "${package.src}/${package.subdir or ""}/src/**/*.purs"
+          purs compile --codegen "${codegen}${lib.optionalString withDocs ",docs"}" ${toString globs} "${package.src}/${package.subdir or ""}/src/**/*.purs"
           ${backendCommand}
         '';
         installPhase = ''

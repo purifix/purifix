@@ -9,6 +9,7 @@
 , purescript-registry-index
 , jq
 , esbuild
+, withDocs ? true
 }:
 {
   # Source of the input purescript package. Should be a path containing a
@@ -67,7 +68,8 @@ let
       codegen
       compiler
       fetch-sources
-      backendCommand;
+      backendCommand
+      withDocs;
   };
 
   build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [{
