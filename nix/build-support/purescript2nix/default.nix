@@ -86,31 +86,31 @@ let
     dependencies = spagoYamlJSON.package.test.dependencies ++ spagoYamlJSON.package.dependencies;
   }]);
 
-  buildSources = build-closure.packages;
-  testSources = test-closure.packages;
 
-
-  testSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') testSources;
-  buildSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') buildSources;
+  buildSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') build-closure.packages;
+  testSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') test-closure.packages;
 
 
   testMain = spagoYamlJSON.package.test.main or "Test.Main";
 
+  prepareOutput = { package, caches, globs, copyOutput, ... }: ''
+    mkdir -p output
+  '' + lib.optionalString (builtins.length package.dependencies > 0) ''
+    cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
+    chmod -R +w output
+    ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
+  '';
+
   purescript-compile =
+    let
+      inherit (build-pkgs.${spagoYamlJSON.package.name}) globs;
+    in
     if incremental then
-      let
-        inherit (build-pkgs.${spagoYamlJSON.package.name}) package caches globs copyOutput;
-      in
-      writeShellScriptBin "purescript-compile" (''
-        mkdir -p output
-      '' + lib.optionalString (builtins.length package.dependencies > 0) ''
-        cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
-        chmod -R +w output
-        ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
-      '' + ''
-        purs compile --codegen ${codegen} ${toString globs} "$@"
-        ${backendCommand}
-      '')
+      writeShellScriptBin "purescript-compile"
+        (prepareOutput build-pkgs.${spagoYamlJSON.package.name} + ''
+          purs compile --codegen ${codegen} ${toString globs} "$@"
+          ${backendCommand}
+        '')
     else
       writeShellScriptBin "purescript-compile" ''
         purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$@"
@@ -147,6 +147,42 @@ let
         '';
       };
 
+  docs = { format ? "html" }:
+    if incremental
+    then
+      let
+        inherit (build-pkgs.${spagoYamlJSON.package.name}) globs;
+      in
+      # TODO make documentation generation incremental as well
+      stdenv.mkDerivation {
+        name = "${spagoYamlJSON.package.name}-docs";
+        src = src + "/${subdir}";
+        nativeBuildInputs = [
+          compiler
+        ];
+        buildPhase = (prepareOutput build-pkgs.${spagoYamlJSON.package.name}) + ''
+          purs docs --format ${format} ${toString globs} "$src/**/*.purs" --output docs
+        '';
+        installPhase = ''
+          mv docs $out
+        '';
+      }
+    else
+      stdenv.mkDerivation {
+        name = "${spagoYamlJSON.package.name}-docs";
+        src = src + "/${subdir}";
+        nativeBuildInputs = [
+          compiler
+        ];
+        buildPhase = ''
+          purs docs --format ${format} ${toString buildSourceGlobs} "$src/src/**/*.purs" --output docs
+        '';
+        installPhase = ''
+          mv docs $out
+        '';
+      };
+
+
   develop = stdenv.mkDerivation {
     name = "develop-${spagoYamlJSON.package.name}";
     buildInputs = [
@@ -161,7 +197,7 @@ let
       build-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
         (old: {
           passthru = {
-            inherit build test develop bundle;
+            inherit build test develop bundle docs;
           };
         })
     else
@@ -169,7 +205,7 @@ let
         pname = spagoYamlJSON.package.name;
         version = spagoYamlJSON.package.version;
 
-        inherit src;
+        src = src + "/${subdir}";
 
         nativeBuildInputs = [
           compiler
@@ -178,11 +214,11 @@ let
         installPhase = ''
           mkdir -p "$out"
           cd "$out"
-          purs compile --codegen ${codegen} ${toString buildSourceGlobs} "${src}/${subdir}/src/**/*.purs"
+          purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$src/src/**/*.purs"
           ${backendCommand}
         '';
         passthru = {
-          inherit build bundle develop test;
+          inherit build bundle develop test docs;
         };
       };
 

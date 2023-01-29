@@ -90,12 +90,14 @@
               app = true;
               minify = true;
             };
+            example-registry-package-docs = example-registry-package.docs { };
             inherit nonincremental-package;
             nonincremental-package-test = nonincremental-package.test;
             nonincremental-package-bundle = nonincremental-package.bundle {
               app = true;
               minify = true;
             };
+            nonincremental-package-docs = nonincremental-package.docs { format = "markdown"; };
             example-purenix-package = (pkgs.extend purenix.overlay).purescript2nix {
               src = ./example-purenix-package;
               backend = pkgs.purenix;
