@@ -132,6 +132,17 @@
           subdir = "example-registry-package";
           src = ./.;
         }).develop;
+        spago =
+          let
+            pkgs = nixpkgsFor.${system};
+            easy-ps = import easy-purescript-nix {
+              pkgs = pkgs;
+            };
+          in
+          pkgs.mkShell {
+            name = "spago-shell";
+            buildInputs = [ easy-ps.spago easy-ps.purs-0_15_7 ];
+          };
       });
 
       devShell = forAllSystems (system: self.devShells.${system}.purescript-dev-shell);
