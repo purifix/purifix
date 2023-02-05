@@ -7,6 +7,7 @@
 , fromYAML
 , purescript-registry
 , purescript-registry-index
+, purescript-language-server
 , jq
 , esbuild
 , withDocs ? true
@@ -185,13 +186,18 @@ let
       };
 
 
-  develop = stdenv.mkDerivation {
-    name = "develop-${spagoYamlJSON.package.name}";
-    buildInputs = [
-      compiler
-      purescript-compile
-    ];
-  };
+  develop =
+    stdenv.mkDerivation {
+      name = "develop-${spagoYamlJSON.package.name}";
+      buildInputs = [
+        compiler
+        purescript-compile
+        purescript-language-server
+      ];
+      shellHook = ''
+        export PURS_IDE_SOURCES='${toString buildSourceGlobs}'
+      '';
+    };
 
   build =
     if incremental

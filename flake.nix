@@ -73,11 +73,11 @@
             all-package-sets = pkgs.linkFarm "purescript2nix-package-sets" (pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
             example-registry-package = pkgs.purescript2nix {
               subdir = "example-registry-package";
-              src = ./.;
+              src = ./examples;
             };
             nonincremental-package = pkgs.purescript2nix {
               subdir = "example-registry-package";
-              src = ./.;
+              src = ./examples;
               incremental = false;
             };
           in
@@ -85,6 +85,18 @@
             inherit all-package-sets;
           } // {
             inherit example-registry-package;
+            conflict = pkgs.purescript2nix {
+              src = ./examples;
+              subdir = "top-level-conflict";
+            };
+            conflict-a = pkgs.purescript2nix {
+              src = ./examples;
+              subdir = "dependency-conflict";
+            };
+            conflict-b = pkgs.purescript2nix {
+              src = ./examples;
+              subdir = "dependency-conflict-b";
+            };
             example-registry-package-test = example-registry-package.test;
             example-registry-package-bundle = example-registry-package.bundle {
               app = true;
@@ -99,7 +111,7 @@
             };
             nonincremental-package-docs = nonincremental-package.docs { format = "markdown"; };
             example-purenix-package = (pkgs.extend purenix.overlay).purescript2nix {
-              src = ./example-purenix-package;
+              src = ./examples/example-purenix-package;
               backend = pkgs.purenix;
             };
             purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
@@ -120,6 +132,17 @@
           subdir = "example-registry-package";
           src = ./.;
         }).develop;
+        spago =
+          let
+            pkgs = nixpkgsFor.${system};
+            easy-ps = import easy-purescript-nix {
+              pkgs = pkgs;
+            };
+          in
+          pkgs.mkShell {
+            name = "spago-shell";
+            buildInputs = [ easy-ps.spago easy-ps.purs-0_15_7 ];
+          };
       });
 
       devShell = forAllSystems (system: self.devShells.${system}.purescript-dev-shell);

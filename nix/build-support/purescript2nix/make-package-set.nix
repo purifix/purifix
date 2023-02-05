@@ -16,6 +16,7 @@ let
         dependencies = package.dependencies;
       };
       caches = map (dep: let pkg = final.${dep}; in ''${pkg}/output/cache-db.json'') package.dependencies;
+
       globs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') dependency-closure.packages;
       value = stdenv.mkDerivation {
         pname = package.pname;
@@ -27,7 +28,7 @@ let
         preparePhase = ''
           mkdir -p output
         '' + lib.optionalString (builtins.length package.dependencies > 0) ''
-          cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
+          echo ${toString copyOutput} | xargs cp -r --preserve --no-clobber -t output/
           chmod -R +w output
           ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
         '';
