@@ -89,6 +89,14 @@
               src = ./examples;
               subdir = "top-level-conflict";
             };
+            conflict-a = pkgs.purescript2nix {
+              src = ./examples;
+              subdir = "dependency-conflict";
+            };
+            conflict-b = pkgs.purescript2nix {
+              src = ./examples;
+              subdir = "dependency-conflict-b";
+            };
             example-registry-package-test = example-registry-package.test;
             example-registry-package-bundle = example-registry-package.bundle {
               app = true;

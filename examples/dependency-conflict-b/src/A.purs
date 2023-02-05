@@ -1,4 +1,4 @@
 module A where
 
 example :: Int
-example = 1
+example = 2

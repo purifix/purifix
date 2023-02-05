@@ -1,1 +1,1 @@
-module A where
+module B where
