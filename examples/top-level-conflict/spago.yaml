@@ -1,0 +1,9 @@
+package:
+  name: top-level-conflict
+  version: 0.0.1
+  dependencies: [ "prelude"]
+workspace:
+  set:
+    registry: 0.0.2
+  extra_packages:
+    path: ../dependency-conflict

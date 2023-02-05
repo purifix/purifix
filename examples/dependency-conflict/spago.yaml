@@ -1,0 +1,7 @@
+package:
+  name: dependency-conflict
+  version: 0.0.1
+  dependencies: [ "prelude"]
+workspace:
+  set:
+    registry: 0.0.2
