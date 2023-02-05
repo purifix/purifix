@@ -1,4 +1,4 @@
-module A where
+module B where
 
 example :: Int
 example = 2
