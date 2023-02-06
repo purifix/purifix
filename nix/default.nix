@@ -39,7 +39,7 @@ let
 
   example-registry-package = pkgs.purescript2nix {
     subdir = "example-registry-package";
-    src = ../.;
+    src = ../examples;
   };
   example-registry-package-test = example-registry-package.test;
 in
