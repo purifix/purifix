@@ -37,7 +37,7 @@ let
       compiler
       fetch-sources
       backendCommand;
-    withDocs = true;
+    withDocs = false;
   };
   pkgs = make-pkgs pkgs closure.packages;
   paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;

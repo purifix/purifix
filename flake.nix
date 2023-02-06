@@ -130,7 +130,7 @@
         # ./example-purescript-package. But most users can ignore this.
         purescript-dev-shell = (nixpkgsFor.${system}.purescript2nix {
           subdir = "example-registry-package";
-          src = ./.;
+          src = ./examples;
         }).develop;
         spago =
           let
