@@ -98,6 +98,7 @@
               subdir = "dependency-conflict-b";
             };
             example-registry-package-test = example-registry-package.test;
+            example-registry-package-run = example-registry-package.run;
             example-registry-package-bundle = example-registry-package.bundle {
               app = true;
               minify = true;
