@@ -15,6 +15,6 @@ jobs:
         nix_conf: experimental-features = nix-command flakes
     - uses: cachix/cachix-action@v12
       with:
-        name: purescript2nix
+        name: purifix
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: nix build .#all-package-sets -L

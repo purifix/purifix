@@ -1,6 +1,6 @@
 { stdenv
 , callPackage
-, purescript2nix-compiler
+, purifix-compiler
 , writeShellScriptBin
 , nodejs
 , lib
@@ -59,7 +59,7 @@ let
   };
 
   compiler-version = package-set.compiler;
-  compiler = purescript2nix-compiler compiler-version;
+  compiler = purifix-compiler compiler-version;
   codegen = if backend == null then "js" else "corefn";
 
 

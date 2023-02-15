@@ -1,27 +1,27 @@
-# purescript2nix
+# purifix
 
 This is a Nix function for easily building PureScript projects with Nix.
 
-The advantage of `purescript2nix` is that your `spago.yaml` file act as a
+The advantage of `purifix` is that your `spago.yaml` file act as a
 single source of truth.  When you update dependencies in `spago.yaml` you don't
 need to update the Nix expression at all.  It automatically picks up changes
 from the YAML file.
 
-Using `purescript2nix` on a PureScript packages looks like the
+Using `purifix` on a PureScript packages looks like the
 following. This is how you would build the PureScript package
 [`./example-registry-package/`](./example-registry-package/)
-with `purescript2nix`:
+with `purifix`:
 
 
 ```nix
-purescript2nix {
+purifix {
   src = ./example-purescript-package;
 }
 ```
 
-## Installing / Getting `purescript2nix`
+## Installing / Getting `purifix`
 
-The `purescript2nix` function lives in this repo, and the recommend installation procedure is to include this flake and add the exported overlay to overlays when importing nixpkgs.
+The `purifix` function lives in this repo, and the recommend installation procedure is to include this flake and add the exported overlay to overlays when importing nixpkgs.
 
 A simple package could be installed in a flake.nix file like below:
 
@@ -31,8 +31,8 @@ A simple package could be installed in a flake.nix file like below:
     nixpkgs = {
       url = "github:NixOS/nixpkgs";
     };
-    purescript2nix = {
-      url = "github:cdepillabout/purescript2nix";
+    purifix = {
+      url = "github:cdepillabout/purifix";
     };
     flake-utils = {
       url = "github:numtide/flake-utils";
@@ -43,9 +43,9 @@ A simple package could be installed in a flake.nix file like below:
       let
         pkgs = import inputs.nixpkgs {
           inherit system;
-          overlays = [ inputs.purescript2nix.overlay ];
+          overlays = [ inputs.purifix.overlay ];
         };
-        my-package = pkgs.purescript2nix {
+        my-package = pkgs.purifix {
           src = ./.;
         };
       in
@@ -58,9 +58,9 @@ A simple package could be installed in a flake.nix file like below:
 }
 ```
 
-## Building the derivation produced by `purescript2nix`
+## Building the derivation produced by `purifix`
 
-Building the derivation produced by `purescript2nix` is as simple as calling
+Building the derivation produced by `purifix` is as simple as calling
 `nix-build` on it.  Here is how you would build the example PureScript package
 in this repo:
 

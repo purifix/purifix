@@ -1,6 +1,6 @@
 {}:
 
-# Nixpkgs with overlays for purescript2nix.  This is convenient to use with
+# Nixpkgs with overlays for purifix.  This is convenient to use with
 # `nix repl`:
 #
 # $ nix repl ./nix
@@ -37,7 +37,7 @@ let
 
   pkgs = import nixpkgs-src { inherit overlays; };
 
-  example-registry-package = pkgs.purescript2nix {
+  example-registry-package = pkgs.purifix {
     subdir = "example-registry-package";
     src = ../examples;
   };

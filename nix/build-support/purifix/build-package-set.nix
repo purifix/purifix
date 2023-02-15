@@ -1,6 +1,6 @@
 { stdenv
 , callPackage
-, purescript2nix-compiler
+, purifix-compiler
 , writeShellScriptBin
 , nodejs
 , lib
@@ -24,7 +24,7 @@ let
     packages
     package-set;
   fetch-sources = callPackage ./fetch-sources.nix { };
-  compiler = purescript2nix-compiler package-set.compiler;
+  compiler = purifix-compiler package-set.compiler;
   codegen = if backend == null then "js" else "corefn";
   closure = fetch-sources {
     inherit packages storage-backend;
