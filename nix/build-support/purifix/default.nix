@@ -105,18 +105,18 @@ let
     ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
   '';
 
-  purescript-compile =
+  purifix =
     let
       inherit (build-pkgs.${spagoYamlJSON.package.name}) globs;
     in
     if incremental then
-      writeShellScriptBin "purescript-compile"
+      writeShellScriptBin "purifix"
         (prepareOutput build-pkgs.${spagoYamlJSON.package.name} + ''
           purs compile --codegen ${codegen} ${toString globs} "$@"
           ${backendCommand}
         '')
     else
-      writeShellScriptBin "purescript-compile" ''
+      writeShellScriptBin "purifix" ''
         purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$@"
         ${backendCommand}
       '';
@@ -195,7 +195,7 @@ let
       name = "develop-${spagoYamlJSON.package.name}";
       buildInputs = [
         compiler
-        purescript-compile
+        purifix
         purescript-language-server
       ];
       shellHook = ''
