@@ -94,6 +94,7 @@ let
   testSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') test-closure.packages;
 
 
+  runMain = spagoYamlJSON.package.main or "Main";
   testMain = spagoYamlJSON.package.test.main or "Test.Main";
 
   prepareOutput = { package, caches, globs, copyOutput, ... }: ''
@@ -119,6 +120,10 @@ let
         purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$@"
         ${backendCommand}
       '';
+
+  run = writeShellScriptBin spagoYamlJSON.package.name ''
+    ${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from '${build}/output/${runMain}/index.js'; main();"
+  '';
 
   # TODO: figure out how to run tests with other backends, js only for now
   test =
@@ -156,7 +161,6 @@ let
       let
         inherit (build-pkgs.${spagoYamlJSON.package.name}) globs;
       in
-      # TODO make documentation generation incremental as well
       stdenv.mkDerivation {
         name = "${spagoYamlJSON.package.name}-docs";
         src = src + "/${subdir}";
@@ -205,7 +209,7 @@ let
       build-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
         (old: {
           passthru = {
-            inherit build test develop bundle docs;
+            inherit build test develop bundle docs run;
           };
         })
     else
@@ -234,20 +238,20 @@ let
     { minify ? false
     , format ? "iife"
     , app ? false
+    , module ? runMain
     }: stdenv.mkDerivation {
       name = "bundle-${spagoYamlJSON.package.name}";
       phases = [ "buildPhase" "installPhase" ];
       nativeBuildInputs = [ esbuild ];
-      # TODO: make module configurable
       buildPhase =
         let
           minification = lib.optionalString minify "--minify";
-          module = "${build}/output/Main/index.js";
+          moduleFile = "${build}/output/${module}/index.js";
           command = "esbuild --bundle --outfile=bundle.js --format=${format}";
         in
         if app
         then ''
-          echo "import {main} from '${module}'; main()" | ${command} ${minification}
+          echo "import {main} from '${moduleFile}'; main()" | ${command} ${minification}
         ''
         else ''
           ${command} ${module}
