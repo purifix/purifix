@@ -41,7 +41,7 @@
     in
 
     {
-      # A Nixpkgs overlay.  This contains the purescript2nix function that
+      # A Nixpkgs overlay.  This contains the purifix function that
       # end-users will want to use.
       overlay = import ./nix/overlay.nix {
         inherit purescript-registry purescript-registry-index easy-purescript-nix;
@@ -51,7 +51,7 @@
         (system:
           let
             pkgs = nixpkgsFor.${system};
-            fromYAML = pkgs.callPackage ./nix/build-support/purescript2nix/from-yaml.nix { };
+            fromYAML = pkgs.callPackage ./nix/build-support/purifix/from-yaml.nix { };
             package-sets = pkgs.lib.filter (v: pkgs.lib.stringLength v > 0) (pkgs.lib.splitString "\n" (builtins.readFile ./package-sets.txt));
             registry-package-sets = builtins.listToAttrs (map
               (registry-version:
@@ -63,19 +63,19 @@
                 in
                 {
                   name = "registry-${major}_${minor}_${patch}";
-                  value = pkgs.callPackage ./nix/build-support/purescript2nix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+                  value = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
                     package-set-config = {
                       registry = registry-version;
                     };
                   };
                 })
               package-sets);
-            all-package-sets = pkgs.linkFarm "purescript2nix-package-sets" (pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
-            example-registry-package = pkgs.purescript2nix {
+            all-package-sets = pkgs.linkFarm "purifix-package-sets" (pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
+            example-registry-package = pkgs.purifix {
               subdir = "example-registry-package";
               src = ./examples;
             };
-            nonincremental-package = pkgs.purescript2nix {
+            nonincremental-package = pkgs.purifix {
               subdir = "example-registry-package";
               src = ./examples;
               incremental = false;
@@ -85,15 +85,15 @@
             inherit all-package-sets;
           } // {
             inherit example-registry-package;
-            conflict = pkgs.purescript2nix {
+            conflict = pkgs.purifix {
               src = ./examples;
               subdir = "top-level-conflict";
             };
-            conflict-a = pkgs.purescript2nix {
+            conflict-a = pkgs.purifix {
               src = ./examples;
               subdir = "dependency-conflict";
             };
-            conflict-b = pkgs.purescript2nix {
+            conflict-b = pkgs.purifix {
               src = ./examples;
               subdir = "dependency-conflict-b";
             };
@@ -110,11 +110,11 @@
               minify = true;
             };
             nonincremental-package-docs = nonincremental-package.docs { format = "markdown"; };
-            example-purenix-package = (pkgs.extend purenix.overlay).purescript2nix {
+            example-purenix-package = (pkgs.extend purenix.overlay).purifix {
               src = ./examples/example-purenix-package;
               backend = pkgs.purenix;
             };
-            purenix-package-set = pkgs.callPackage ./nix/build-support/purescript2nix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+            purenix-package-set = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
               package-set-config = {
                 url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
                 hash = "sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=";
@@ -128,7 +128,7 @@
         # This purescript development shell just contains dhall, purescript,
         # and spago.  This is convenient for making changes to
         # ./example-purescript-package. But most users can ignore this.
-        purescript-dev-shell = (nixpkgsFor.${system}.purescript2nix {
+        purescript-dev-shell = (nixpkgsFor.${system}.purifix {
           subdir = "example-registry-package";
           src = ./examples;
         }).develop;

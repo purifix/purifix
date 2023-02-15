@@ -14,4 +14,4 @@ workspace:
       ref: 04364360f1e5a91173f3b88a5e807773dc06aca5
     example-dependency:
       path: ../example-dependency
-      # path: /home/considerate/dev/considerate/purescript2nix/example-dependency
+      # path: /home/considerate/dev/considerate/purifix/example-dependency
