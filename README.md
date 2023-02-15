@@ -15,7 +15,7 @@ with `purifix`:
 
 ```nix
 purifix {
-  src = ./example-purescript-package;
+  src = ./examples/purescript-package;
 }
 ```
 
@@ -65,31 +65,26 @@ Building the derivation produced by `purifix` is as simple as calling
 in this repo:
 
 ```console
-$ nix-build ./nix -A example-registry-package
+$ nix-build ./nix -A purifix-example
 ...
-/nix/store/z3gvwhpnp0rfi65dgxmk1rjycpa4l1ag-example-purescript-package
+/nix/store/iyk9zzl7bwyvij4s67529xcmqlr3nqil-example-purescript-package-0.0.1
 ```
 
 This produces an output with a single directory `output/`.  `output/` contains
 all the transpiled PureScript code:
 
 ```console
-$ tree /nix/store/z3gvwhpnp0rfi65dgxmk1rjycpa4l1ag-example-purescript-package
-/nix/store/z3gvwhpnp0rfi65dgxmk1rjycpa4l1ag-example-purescript-package
+$ tree /nix/store/hjcxs72xkjm4qad78railg6kflbljpcz-example-purescript-package-0.0.1
+/nix/store/hjcxs72xkjm4qad78railg6kflbljpcz-example-purescript-package-0.0.1
 └── output
     ├── cache-db.json
     ├── Control.Alt
+    │   ├── docs.json
     │   ├── externs.cbor
     │   └── index.js
     ├── Control.Alternative
+    │   ├── docs.json
     │   ├── externs.cbor
-    │   └── index.js
-    ├── Control.Applicative
-    │   ├── externs.cbor
-    │   └── index.js
-    ├── Control.Apply
-    │   ├── externs.cbor
-    │   ├── foreign.js
 ...
 ```
 

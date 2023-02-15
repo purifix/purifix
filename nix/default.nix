@@ -1,13 +1,3 @@
-{}:
-
-# Nixpkgs with overlays for purifix.  This is convenient to use with
-# `nix repl`:
-#
-# $ nix repl ./nix
-# nix-repl>
-#
-# Within this nix-repl, you have access to everything defined in ./overlay.nix.
-
 let
   flake-lock = builtins.fromJSON (builtins.readFile ../flake.lock);
 
@@ -30,19 +20,27 @@ let
     url = "https://github.com/purescript/registry-index/archive/${flake-lock.nodes.easy-purescript-nix.locked.rev}.tar.gz";
     sha256 = flake-lock.nodes.easy-purescript-nix.locked.narHash;
   };
-
-  overlays = [
-    (import ./overlay.nix { inherit purescript-registry purescript-registry-index easy-purescript-nix; })
-  ];
-
-  pkgs = import nixpkgs-src { inherit overlays; };
-
-  example-registry-package = pkgs.purifix {
-    subdir = "example-registry-package";
-    src = ../examples;
-  };
-  example-registry-package-test = example-registry-package.test;
+  overlay = import ./overlay.nix { inherit purescript-registry purescript-registry-index easy-purescript-nix; };
 in
-pkgs // {
-  inherit example-registry-package example-registry-package-test;
+{ pkgs ? import nixpkgs-src { } }:
+
+# Nixpkgs with overlays for purifix.  This is convenient to use with
+# `nix repl`:
+#
+# $ nix repl ./nix
+# nix-repl>
+#
+# Within this nix-repl, you have access to everything defined in ./overlay.nix.
+
+
+let
+
+  final = pkgs.extend overlay;
+
+in
+{
+  inherit (final) purifix;
+  purifix-example = final.purifix {
+    src = ../examples/purescript-package;
+  };
 }
