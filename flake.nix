@@ -52,11 +52,12 @@
           let
             pkgs = nixpkgsFor.${system};
             fromYAML = pkgs.callPackage ./nix/build-support/purifix/from-yaml.nix { };
-            package-sets = pkgs.lib.filter (v: pkgs.lib.stringLength v > 0) (pkgs.lib.splitString "\n" (builtins.readFile ./package-sets.txt));
+            package-sets = builtins.attrNames (builtins.readDir (purescript-registry + "/package-sets"));
             registry-package-sets = builtins.listToAttrs (map
-              (registry-version:
+              (registry-file:
                 let
-                  parts = pkgs.lib.splitVersion registry-version;
+                  registry-version = nixpkgs.lib.removeSuffix ".json" registry-file;
+                  parts = nixpkgs.lib.splitVersion registry-version;
                   major = builtins.elemAt parts 0;
                   minor = builtins.elemAt parts 1;
                   patch = builtins.elemAt parts 2;
@@ -70,7 +71,7 @@
                   };
                 })
               package-sets);
-            all-package-sets = pkgs.linkFarm "purifix-package-sets" (pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
+            all-package-sets = pkgs.linkFarm "purifix-package-sets" (nixpkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
             example-registry-package = pkgs.purifix {
               subdir = "example-registry-package";
               src = ./examples;
