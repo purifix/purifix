@@ -53,7 +53,7 @@
             pkgs = nixpkgsFor.${system};
             fromYAML = pkgs.callPackage ./nix/build-support/purifix/from-yaml.nix { };
             package-sets = builtins.attrNames (builtins.readDir (purescript-registry + "/package-sets"));
-            registry-package-sets = builtins.listToAttrs (map
+            package-set-versions = map
               (registry-file:
                 let
                   registry-version = nixpkgs.lib.removeSuffix ".json" registry-file;
@@ -62,16 +62,23 @@
                   minor = builtins.elemAt parts 1;
                   patch = builtins.elemAt parts 2;
                 in
-                {
-                  name = "registry-${major}_${minor}_${patch}";
-                  value = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
-                    package-set-config = {
-                      registry = registry-version;
-                    };
+                { inherit registry-version major minor patch; }
+              )
+              package-sets;
+            recent-package-set-versions = nixpkgs.lib.filter ({ registry-version, ... }: nixpkgs.lib.versionAtLeast registry-version "9.0.0") package-set-versions;
+            to-package-set = { registry-version, major, minor, patch }:
+              {
+                name = "registry-${major}_${minor}_${patch}";
+                value = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+                  package-set-config = {
+                    registry = registry-version;
                   };
-                })
-              package-sets);
+                };
+              };
+            registry-package-sets = builtins.listToAttrs (map to-package-set package-set-versions);
+            recent-registry-package-sets = builtins.listToAttrs (map to-package-set recent-package-set-versions);
             all-package-sets = pkgs.linkFarm "purifix-package-sets" (nixpkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
+            new-package-sets = pkgs.linkFarm "recent-purifix-package-sets" (nixpkgs.lib.mapAttrsToList (name: path: { inherit name path; }) recent-registry-package-sets);
             example-registry-package = pkgs.purifix {
               subdir = "example-registry-package";
               src = ./examples;
@@ -83,7 +90,7 @@
             };
           in
           registry-package-sets // {
-            inherit all-package-sets;
+            inherit all-package-sets new-package-sets;
           } // {
             inherit example-registry-package;
             conflict = pkgs.purifix {

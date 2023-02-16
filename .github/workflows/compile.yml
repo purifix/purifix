@@ -17,4 +17,4 @@ jobs:
       with:
         name: purifix
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - run: nix build .#all-package-sets -L
+    - run: nix build .#new-package-sets -L
