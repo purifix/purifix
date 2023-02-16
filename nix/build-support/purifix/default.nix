@@ -138,6 +138,7 @@ let
           installPhase = ''
             node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
           '';
+          fixupPhase = "#nothing to be done here";
         })
     else
       stdenv.mkDerivation {
@@ -208,6 +209,7 @@ let
     then
       build-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
         (old: {
+          fixupPhase = "# don't clear output directory";
           passthru = {
             inherit build test develop bundle docs run;
           };

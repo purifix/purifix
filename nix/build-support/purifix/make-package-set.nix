@@ -10,18 +10,19 @@
 let
   build-package = package:
     let
-      copyOutput = map (dep: let pkg = final.${dep}; in ''${pkg}/output/*'') package.dependencies;
+      get-dep = dep: final.${dep};
       dependency-closure = fetch-sources {
         inherit packages storage-backend;
         dependencies = package.dependencies;
       };
-      caches = map (dep: let pkg = final.${dep}; in ''${pkg}/output/cache-db.json'') package.dependencies;
+      copyOutput = map (dep: ''${get-dep dep.pname}/output/*'') dependency-closure.packages;
+      caches = map (dep: ''${get-dep dep.pname}/output/cache-db.json'') dependency-closure.packages;
 
       globs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') dependency-closure.packages;
       value = stdenv.mkDerivation {
         pname = package.pname;
         version = package.version or "0.0.0";
-        phases = [ "preparePhase" "buildPhase" "installPhase" ];
+        phases = [ "preparePhase" "buildPhase" "installPhase" "fixupPhase" ];
         nativeBuildInputs = [
           compiler
         ];
@@ -39,6 +40,16 @@ let
         installPhase = ''
           mkdir -p "$out"
           cp -r output "$out/"
+        '';
+        fixupPhase = ''
+          for file in ${toString copyOutput}; do
+            name="$(basename "$file")";
+            if [ "$name" == "cache-db.json" ]; then
+              true # skip
+            else
+              rm -rf "$out/output/$name"
+            fi
+          done
         '';
         passthru = {
           inherit globs caches copyOutput;
