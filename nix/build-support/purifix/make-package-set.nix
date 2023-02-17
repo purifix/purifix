@@ -1,4 +1,25 @@
-{ jq, stdenv, lib }:
+{ jq, stdenv, lib, python3, writeText }:
+let
+  # TODO: remove python dependency due to this script
+  # This script will load the cache-db.json from the output folder and remove
+  # all keys present in the dependencies' cache-db files. This results in that
+  # each package only stores the modules that are defined in that package in
+  # its cache-db.json
+  reduce-chache-db = writeText "chache-db.py" ''
+    import json
+    import sys
+
+
+    with open(sys.argv[1]) as f:
+      obj = json.load(f)
+    for filename in sys.argv[2:]:
+      with open(filename) as f:
+        x = json.load(f)
+      for key in x.keys():
+        del obj[key]
+    print(json.dumps(obj))
+  '';
+in
 { storage-backend
 , packages
 , codegen
@@ -50,6 +71,8 @@ let
               rm -rf "$out/output/$name"
             fi
           done
+          ${python3}/bin/python ${reduce-chache-db} $out/output/cache-db.json ${toString caches} > cache-db.json
+          mv cache-db.json $out/output/cache-db.json
         '';
         passthru = {
           inherit globs caches copyOutput;
