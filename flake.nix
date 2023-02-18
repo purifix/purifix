@@ -65,7 +65,7 @@
                 { inherit registry-version major minor patch; }
               )
               package-sets;
-            recent-package-set-versions = nixpkgs.lib.filter ({ registry-version, ... }: nixpkgs.lib.versionAtLeast registry-version "9.0.0") package-set-versions;
+            recent-package-set-versions = nixpkgs.lib.filter ({ registry-version, ... }: nixpkgs.lib.versionAtLeast registry-version "12.0.0") package-set-versions;
             to-package-set = { registry-version, major, minor, patch }:
               {
                 name = "registry-${major}_${minor}_${patch}";
