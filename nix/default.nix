@@ -38,9 +38,4 @@ let
   final = pkgs.extend overlay;
 
 in
-{
-  inherit (final) purifix;
-  purifix-example = final.purifix {
-    src = ../examples/purescript-package;
-  };
-}
+final.purifix // { pkgs = final; }

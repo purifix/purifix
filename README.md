@@ -39,7 +39,7 @@ purifix {
 
 ## Installing / Getting `purifix`
 
-The `purifix` function lives in this repo, and the recommend installation procedure is to include this flake and add the exported overlay to overlays when importing nixpkgs.
+The `purifix` function lives in this repo, and the recommended installation procedure is to include this flake and add the exported overlay to overlays when importing nixpkgs.
 
 A simple package could be installed in a flake.nix file like below:
 
@@ -76,6 +76,19 @@ A simple package could be installed in a flake.nix file like below:
 }
 ```
 
+You can also use `purifix` without flakes by importing the `purifix` function like so:
+```nix
+let
+  purifix-src = builtins.fetchGit "https://github.com/purifix/purifix.git";
+  purifix = import (purifix-src + "/nix") {};
+in purifix {
+  src = ./.;
+}
+```
+
+It's recommended to pin the commit fetched with the `rev` attribute so that
+your builds remain reproducible.
+
 ## Building the derivation produced by `purifix`
 
 Building the derivation produced by `purifix` is as simple as calling
@@ -83,7 +96,7 @@ Building the derivation produced by `purifix` is as simple as calling
 in this repo:
 
 ```console
-$ nix-build ./nix -A purifix-example
+$ nix-build ./nix/examples.nix -A purifix-example
 ...
 /nix/store/iyk9zzl7bwyvij4s67529xcmqlr3nqil-example-purescript-package-0.0.1
 ```
