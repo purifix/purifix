@@ -1,0 +1,27 @@
+
+name: 'Bump Versions'
+
+on:
+  schedule:
+    - cron: '30 19 * * 4'
+  workflow_dispatch:
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Nix
+      uses: nixbuild/nix-quick-install-action@v21
+      with:
+        nix_conf: experimental-features = nix-command flakes
+    - run: |
+        nix flake lock --update-input purescript-registry
+        nix flake lock --update-input purescript-registry-index
+        git add flake.lock
+        if ! git diff --exit-code --quiet --staged; then
+          git config user.name 'Viktor Kronvall'
+          git config user.email 'viktor.kronvall@gmail.com'
+          git commit -m "Update registry version"
+          git push
+        fi
