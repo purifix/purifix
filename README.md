@@ -7,7 +7,7 @@ single source of truth.  When you update dependencies in `spago.yaml` you don't
 need to update the Nix expression at all.  It automatically picks up changes
 from the YAML file.
 
-Using `purifix` on a PureScript packages looks like the
+Using `purifix` on a PureScript package looks like the
 following. This is how you would build the PureScript package
 [`./examples/purescript-package/`](./examples/purescript-package/)
 with `purifix`:
