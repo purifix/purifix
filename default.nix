@@ -17,7 +17,7 @@ let
   };
 
   easy-purescript-nix = builtins.fetchTarball {
-    url = "https://github.com/purescript/registry-index/archive/${flake-lock.nodes.easy-purescript-nix.locked.rev}.tar.gz";
+    url = "https://github.com/justinwoo/easy-purescript-nix/archive/${flake-lock.nodes.easy-purescript-nix.locked.rev}.tar.gz";
     sha256 = flake-lock.nodes.easy-purescript-nix.locked.narHash;
   };
   overlay = import ./nix/overlay.nix { inherit purescript-registry purescript-registry-index easy-purescript-nix; };
