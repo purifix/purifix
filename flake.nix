@@ -53,7 +53,7 @@
             pkgs = nixpkgsFor.${system};
             fromYAML = pkgs.callPackage ./nix/build-support/purifix/from-yaml.nix { };
             package-sets = builtins.attrNames (builtins.readDir (purescript-registry + "/package-sets"));
-            package-set-versions = map
+            package-set-versions-raw = map
               (registry-file:
                 let
                   registry-version = nixpkgs.lib.removeSuffix ".json" registry-file;
@@ -65,6 +65,10 @@
                 { inherit registry-version major minor patch; }
               )
               package-sets;
+            bad-package-sets = [
+              "14.2.0" # jelly fails to compile
+            ];
+            package-set-versions = builtins.filter ({ registry-version, ... }: !(builtins.elem registry-version bad-package-sets)) package-set-versions-raw;
             recent-package-set-versions = nixpkgs.lib.filter ({ registry-version, ... }: nixpkgs.lib.versionAtLeast registry-version "12.0.0") package-set-versions;
             to-package-set = { registry-version, major, minor, patch }:
               {
