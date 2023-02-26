@@ -1,5 +1,5 @@
 let
-  flake-lock = builtins.fromJSON (builtins.readFile ../flake.lock);
+  flake-lock = builtins.fromJSON (builtins.readFile ./flake.lock);
 
   nixpkgs-src = builtins.fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/${flake-lock.nodes.nixpkgs.locked.rev}.tar.gz";
@@ -20,7 +20,7 @@ let
     url = "https://github.com/purescript/registry-index/archive/${flake-lock.nodes.easy-purescript-nix.locked.rev}.tar.gz";
     sha256 = flake-lock.nodes.easy-purescript-nix.locked.narHash;
   };
-  overlay = import ./overlay.nix { inherit purescript-registry purescript-registry-index easy-purescript-nix; };
+  overlay = import ./nix/overlay.nix { inherit purescript-registry purescript-registry-index easy-purescript-nix; };
 in
 { pkgs ? import nixpkgs-src { } }:
 

@@ -79,15 +79,14 @@ A simple package could be installed in a flake.nix file like below:
 You can also use `purifix` without flakes by importing the `purifix` function like so:
 ```nix
 let
-  purifix-src = builtins.fetchGit "https://github.com/purifix/purifix.git";
-  purifix = import (purifix-src + "/nix") {};
+  purifix = import (builtins.fetchGit "https://github.com/purifix/purifix.git") {};
 in purifix {
   src = ./.;
 }
 ```
 
-It's recommended to pin the commit fetched with the `rev` attribute so that
-your builds remain reproducible.
+It's recommended to pin the fetched purifix commit using the `rev` attribute so
+that your builds remain reproducible.
 
 ## Building the derivation produced by `purifix`
 
@@ -241,7 +240,8 @@ $ ./result/bin/example-purescript-package
 1337
 ```
 
-This can also be packaged as an [app in a flake](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-run.html#flake-output-attributes). The executable is given the same name as the package.
+This can also be packaged as an [app in a flake](https://nixos.org/manual/nix/stable/command-ref/new-cli/nix3-run.html#flake-output-attributes).
+The executable is given the same name as the package.
 
 ## Generating documentation
 

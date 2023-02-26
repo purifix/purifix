@@ -1,4 +1,4 @@
-let purifix = import ./default.nix { };
+let purifix = import ../default.nix { };
 in
 {
   purifix-example = purifix {
