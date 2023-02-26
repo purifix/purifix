@@ -46,4 +46,4 @@ let
     then package-set-config.registry
     else package-set-config.git or "unknown";
 in
-linkFarm "purescript-registry-${package-set-version}" paths
+linkFarm "purescript-registry-${package-set-version}" paths // pkgs
