@@ -18,7 +18,6 @@
   #
   # Example: ./some/path/to/purescript-strings
   src
-, incremental ? true
 , subdir ? ""
 , spagoYaml ? "${src}/${subdir}/spago.yaml"
 , backend ? null
@@ -63,7 +62,7 @@ let
   codegen = if backend == null then "js" else "corefn";
 
 
-  make-pkgs = callPackage ./make-package-set.nix { } {
+  make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { }) {
     inherit storage-backend
       packages
       codegen
@@ -73,7 +72,7 @@ let
       withDocs;
   };
 
-  build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [{
+  top-level = {
     pname = spagoYamlJSON.package.name;
     version = spagoYamlJSON.package.version;
     src =
@@ -86,54 +85,62 @@ let
     repo = src;
     subdir = subdir;
     dependencies = spagoYamlJSON.package.dependencies;
-  }]);
+  };
+  build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [ top-level ]);
 
-  test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ [{
-    pname = spagoYamlJSON.package.name;
-    version = spagoYamlJSON.package.version;
-    repo = src;
-    src =
-      if subdir == ""
-      then src
-      else
-        builtins.path {
-          path = src + "/${subdir}";
-        };
-    subdir = subdir;
+  top-level-test = top-level // {
     dependencies = spagoYamlJSON.package.test.dependencies ++ spagoYamlJSON.package.dependencies;
-  }]);
-
-
-  buildSourceGlobs = map (dep: ''"${dep.src}/src/**/*.purs"'') build-closure.packages;
-  testSourceGlobs = map (dep: ''"${dep.src}/src/**/*.purs"'') test-closure.packages;
+  };
+  test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ [ top-level-test ]);
 
 
   runMain = spagoYamlJSON.package.main or "Main";
   testMain = spagoYamlJSON.package.test.main or "Test.Main";
 
-  prepareOutput = { package, caches, globs, copyOutput, ... }: ''
+  prepareOutput = { caches, globs, copyOutput, ... }: ''
     mkdir -p output
-  '' + lib.optionalString (builtins.length package.dependencies > 0) ''
+  '' + lib.optionalString (builtins.length caches > 0) ''
     cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
     chmod -R +w output
     ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
   '';
 
-  purifix =
+  purifix = { localPackages ? [ spagoYamlJSON.package.name ] }:
     let
-      inherit (build-pkgs.${spagoYamlJSON.package.name}) globs;
+      all-dependencies = map (pkg: build-pkgs.${pkg}.package.dependencies) localPackages;
+      maker = make-pkgs.override {
+        filterPackages = pkg: !(builtins.elem pkg localPackages);
+      };
+      package = {
+        pname = "purifix-dev-shell";
+        version = "0.0.0";
+        src = null;
+        subdir = null;
+        dependencies = localPackages;
+      };
+      deps-pkgs = maker deps-pkgs (build-closure.packages ++ [ top-level package ]);
+      dev-globs = map (pkg: ''''${PURIFIX_ROOT:-.}/${build-pkgs.${pkg}.package.subdir}/src/**/*.purs'') localPackages;
     in
-    if incremental then
-      writeShellScriptBin "purifix"
-        (prepareOutput build-pkgs.${spagoYamlJSON.package.name} + ''
-          purs compile --codegen ${codegen} ${toString globs} "$@"
+    {
+      purifix = writeShellScriptBin "purifix"
+        (prepareOutput
+          {
+            inherit (deps-pkgs.purifix-dev-shell) globs caches copyOutput;
+          } + ''
+          purs compile --codegen ${codegen} ${toString deps-pkgs.purifix-dev-shell.globs} "$@"
           ${backendCommand}
-        '')
-    else
-      writeShellScriptBin "purifix" ''
-        purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$@"
-        ${backendCommand}
-      '';
+        '') // {
+        inherit (deps-pkgs.purifix-dev-shell) globs caches copyOutput;
+      };
+      purifix-all = writeShellScriptBin "purifix-all"
+        (prepareOutput
+          {
+            inherit (deps-pkgs.purifix-dev-shell) globs caches copyOutput;
+          } + ''
+          purs compile --codegen ${codegen} ${toString deps-pkgs.purifix-dev-shell.globs} ${toString dev-globs} "$@"
+          ${backendCommand}
+        '');
+    };
 
   run = writeShellScriptBin spagoYamlJSON.package.name ''
     ${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from '${build}/output/${runMain}/index.js'; main();"
@@ -141,114 +148,60 @@ let
 
   # TODO: figure out how to run tests with other backends, js only for now
   test =
-    if incremental
-    then
-      test-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
-        (old: {
-          nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ nodejs ];
-          buildPhase = ''
-            purs compile ${toString old.passthru.globs} "${old.passthru.package.src}/${old.passthru.package.subdir or ""}/test/**/*.purs"
-          '';
-          installPhase = ''
-            node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
-          '';
-          fixupPhase = "#nothing to be done here";
-        })
-    else
-      stdenv.mkDerivation {
-        name = "test-${spagoYamlJSON.package.name}";
-        src = src + "/${subdir}";
-        buildInputs = [
-          compiler
-          nodejs
-        ];
+    test-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
+      (old: {
+        nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ nodejs ];
         buildPhase = ''
-          purs compile ${toString testSourceGlobs} "$src/test/**/*.purs"
+          purs compile ${toString old.passthru.globs} "${old.passthru.package.src}/${old.passthru.package.subdir or ""}/test/**/*.purs"
         '';
         installPhase = ''
           node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
         '';
-      };
+        fixupPhase = "#nothing to be done here";
+      });
 
   docs = { format ? "html" }:
-    if incremental
-    then
-      let
-        inherit (build-pkgs.${spagoYamlJSON.package.name}) globs;
-      in
-      stdenv.mkDerivation {
-        name = "${spagoYamlJSON.package.name}-docs";
-        src = src + "/${subdir}";
-        nativeBuildInputs = [
-          compiler
-        ];
-        buildPhase = (prepareOutput build-pkgs.${spagoYamlJSON.package.name}) + ''
-          purs docs --format ${format} ${toString globs} "$src/**/*.purs" --output docs
-        '';
-        installPhase = ''
-          mv docs $out
-        '';
-      }
-    else
-      stdenv.mkDerivation {
-        name = "${spagoYamlJSON.package.name}-docs";
-        src = src + "/${subdir}";
-        nativeBuildInputs = [
-          compiler
-        ];
-        buildPhase = ''
-          purs docs --format ${format} ${toString buildSourceGlobs} "$src/src/**/*.purs" --output docs
-        '';
-        installPhase = ''
-          mv docs $out
-        '';
-      };
+    let
+      inherit (build-pkgs.${spagoYamlJSON.package.name}) globs;
+    in
+    stdenv.mkDerivation {
+      name = "${spagoYamlJSON.package.name}-docs";
+      src = src + "/${subdir}";
+      nativeBuildInputs = [
+        compiler
+      ];
+      buildPhase = (prepareOutput build-pkgs.${spagoYamlJSON.package.name}) + ''
+        purs docs --format ${format} ${toString globs} "$src/**/*.purs" --output docs
+      '';
+      installPhase = ''
+        mv docs $out
+      '';
+    };
 
 
-  develop =
+  develop = { localPackages ? [ spagoYamlJSON.package.name ] }:
+    let pfx = (purifix { inherit localPackages; });
+    in
     stdenv.mkDerivation {
       name = "develop-${spagoYamlJSON.package.name}";
       buildInputs = [
         compiler
-        purifix
         purescript-language-server
+        pfx.purifix
+        pfx.purifix-all
       ];
       shellHook = ''
-        export PURS_IDE_SOURCES='${toString buildSourceGlobs}'
+        export PURS_IDE_SOURCES='${toString pfx.purifix.globs}'
       '';
     };
 
-  build =
-    if incremental
-    then
-      build-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
-        (old: {
-          fixupPhase = "# don't clear output directory";
-          passthru = {
-            inherit build test develop bundle docs run;
-          };
-        })
-    else
-      stdenv.mkDerivation {
-        pname = spagoYamlJSON.package.name;
-        version = spagoYamlJSON.package.version;
-
-        src = src + "/${subdir}";
-
-        nativeBuildInputs = [
-          compiler
-        ];
-
-        installPhase = ''
-          mkdir -p "$out"
-          cd "$out"
-          purs compile --codegen ${codegen} ${toString buildSourceGlobs} "$src/src/**/*.purs"
-          ${backendCommand}
-        '';
-        passthru = {
-          inherit build bundle develop test docs;
-        };
+  build = build-pkgs.${spagoYamlJSON.package.name}.overrideAttrs
+    (old: {
+      fixupPhase = "# don't clear output directory";
+      passthru = {
+        inherit build test develop bundle docs run;
       };
+    });
 
   bundle =
     { minify ? false

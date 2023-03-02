@@ -87,11 +87,6 @@
               subdir = "example-registry-package";
               src = ./examples;
             };
-            nonincremental-package = pkgs.purifix {
-              subdir = "example-registry-package";
-              src = ./examples;
-              incremental = false;
-            };
           in
           registry-package-sets // {
             inherit all-package-sets new-package-sets;
@@ -116,13 +111,6 @@
               minify = true;
             };
             example-registry-package-docs = example-registry-package.docs { };
-            inherit nonincremental-package;
-            nonincremental-package-test = nonincremental-package.test;
-            nonincremental-package-bundle = nonincremental-package.bundle {
-              app = true;
-              minify = true;
-            };
-            nonincremental-package-docs = nonincremental-package.docs { format = "markdown"; };
             example-purenix-package = (pkgs.extend purenix.overlay).purifix {
               src = ./examples/example-purenix-package;
               backend = pkgs.purenix;
@@ -147,7 +135,12 @@
         purescript-dev-shell = (nixpkgsFor.${system}.purifix {
           subdir = "example-registry-package";
           src = ./examples;
-        }).develop;
+        }).develop {
+          localPackages = [
+            "example-purescript-package"
+            "example-dependency"
+          ];
+        };
         spago =
           let
             pkgs = nixpkgsFor.${system};
