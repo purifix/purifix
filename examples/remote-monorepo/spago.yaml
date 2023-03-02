@@ -1,0 +1,16 @@
+package:
+  name: example-purescript-package
+  version: 0.0.1
+  dependencies: [ "console", "effect", "foldable-traversable", "prelude", "sample-common", "sample-server"]
+workspace:
+  set:
+    registry: 11.3.0
+  extra_packages:
+    sample-common:
+      git: "https://github.com/thought2/purifix-monorepo-template.git"
+      ref: "72607cbfa38aa90ec411f58635eb1be6174d4b3d"
+      subdir: "pkgs/sample-common"
+    sample-server:
+      git: "https://github.com/thought2/purifix-monorepo-template.git"
+      ref: "72607cbfa38aa90ec411f58635eb1be6174d4b3d"
+      subdir: "pkgs/sample-server"

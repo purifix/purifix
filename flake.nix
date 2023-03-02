@@ -127,6 +127,9 @@
               src = ./examples/example-purenix-package;
               backend = pkgs.purenix;
             };
+            remote-monorepo = pkgs.purifix {
+              src = ./examples/remote-monorepo;
+            };
             purenix-package-set = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
               package-set-config = {
                 url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
