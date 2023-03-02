@@ -20,14 +20,16 @@ let
 
 
   # Parse the package set from the registry at our requested version
-  package-set-file =
+  registryPackageSet =
     if builtins.hasAttr "registry" package-set-config
-    then "${purescript-registry}/package-sets/${registry-version}.json"
+    then builtins.fromJSON (builtins.readFile "${purescript-registry}/package-sets/${registry-version}.json")
     else
-      fetchurl {
-        inherit (package-set-config) url hash;
-      };
-  registryPackageSet = builtins.fromJSON (builtins.readFile package-set-file);
+      if builtins.hasAttr "inline"
+      then package-set-config.inline
+      else
+        builtins.fromJSON (builtins.readFile (fetchurl {
+          inherit (package-set-config) url hash;
+        }));
 
   readPackageByVersion = package: version:
     let
@@ -66,7 +68,11 @@ let
             type = "inline";
             git = meta.git;
             ref = meta.ref;
-            src = repo;
+            src =
+              if builtins.hasAttr "subdir" meta
+              then builtins.path { path = repo + "/${meta.subdir}"; }
+              else repo;
+            repo = repo;
             pname = package;
           } // lib.optionalAttrs (builtins.hasAttr "subdir" meta) {
             subdir = meta.subdir;
@@ -89,17 +95,30 @@ let
                 realpath --relative-to="${src}" "${src}/${subdir}/${meta.path}" | tr -d '\n' | tee $out
               '';
             });
+            package-src =
+              if absolute
+              then
+                builtins.path
+                  {
+                    path = /. + meta.path;
+                  }
+              else
+                builtins.path {
+                  path = src + "/${relative-path}";
+                }
+            ;
+            repo = if absolute then package-src else src;
           in
           {
             type = "inline";
-            src =
-              if absolute then /. + meta.path
-              else src;
+            repo = repo;
+            src = package-src;
           } // lib.optionalAttrs (! absolute) {
             subdir = relative-path;
           } // lib.optionalAttrs (builtins.hasAttr "dependencies" meta) {
             inherit (meta) dependencies;
-          };
+          }
+        ;
       };
       package-type =
         if builtins.hasAttr "path" meta then "local"
@@ -149,11 +168,11 @@ let
 
   lookupSource = package: meta:
     let
-      targetPursJSON = builtins.fromJSON (builtins.readFile "${meta.src}/${meta.subdir or ""}/purs.json");
-      targetSpagoYAML = fromYAML (builtins.readFile "${meta.src}/${meta.subdir or ""}/spago.yaml");
+      targetPursJSON = builtins.fromJSON (builtins.readFile "${meta.src}/purs.json");
+      targetSpagoYAML = fromYAML (builtins.readFile "${meta.src}/spago.yaml");
       toList = x: if builtins.typeOf x == "list" then x else builtins.attrNames x;
       dependencies =
-        if builtins.pathExists "${meta.src}/${meta.subdir or ""}/purs.json"
+        if builtins.pathExists "${meta.src}/purs.json"
         then toList (targetPursJSON.dependencies or { })
         else toList (targetSpagoYAML.package.dependencies or [ ]);
     in

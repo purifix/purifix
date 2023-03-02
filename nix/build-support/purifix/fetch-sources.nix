@@ -32,12 +32,13 @@ let
       '';
     };
 
-  fetchPackage = value:
+  fetchPackage = value: (
     if value.type == "inline"
     then value
     else value // {
       src = fetchPackageTarball value;
-    };
+    }
+  );
 
   # Packages are a flattened version of the closure.
   flatten = { key, package }: package // {

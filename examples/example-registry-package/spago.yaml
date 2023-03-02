@@ -1,7 +1,7 @@
 package:
   name: example-purescript-package
   version: 0.0.1
-  dependencies: [ "console", "effect", "foldable-traversable", "prelude", "psci-support", "registry-dev", "dodo-printer", "example-dependency" ]
+  dependencies: [ "console", "effect", "foldable-traversable", "prelude", "example-dependency" ]
   test:
     dependencies: ["spec"]
 workspace:
