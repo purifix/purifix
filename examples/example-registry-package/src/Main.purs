@@ -8,5 +8,5 @@ import Example.Dependency(example)
 
 main :: Effect Unit
 main = do
-  log "🍝"
+  log "example"
   log (show example)

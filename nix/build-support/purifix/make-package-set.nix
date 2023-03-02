@@ -39,7 +39,7 @@ let
       copyOutput = map (dep: ''${get-dep dep.pname}/output/*'') dependency-closure.packages;
       caches = map (dep: ''${get-dep dep.pname}/output/cache-db.json'') dependency-closure.packages;
 
-      globs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') dependency-closure.packages;
+      globs = map (dep: ''"${dep.src}/src/**/*.purs"'') dependency-closure.packages;
       value = stdenv.mkDerivation {
         pname = package.pname;
         version = package.version or "0.0.0";
@@ -55,7 +55,7 @@ let
           ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
         '';
         buildPhase = ''
-          purs compile --codegen "${codegen}${lib.optionalString withDocs ",docs"}" ${toString globs} "${package.src}/${package.subdir or ""}/src/**/*.purs"
+          purs compile --codegen "${codegen}${lib.optionalString withDocs ",docs"}" ${toString globs} "${package.src}/src/**/*.purs"
           ${backendCommand}
         '';
         installPhase = ''

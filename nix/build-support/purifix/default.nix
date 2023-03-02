@@ -76,7 +76,14 @@ let
   build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [{
     pname = spagoYamlJSON.package.name;
     version = spagoYamlJSON.package.version;
-    src = src;
+    src =
+      if subdir == ""
+      then src
+      else
+        builtins.path {
+          path = src + "/${subdir}";
+        };
+    repo = src;
     subdir = subdir;
     dependencies = spagoYamlJSON.package.dependencies;
   }]);
@@ -84,14 +91,21 @@ let
   test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ [{
     pname = spagoYamlJSON.package.name;
     version = spagoYamlJSON.package.version;
-    src = src;
+    repo = src;
+    src =
+      if subdir == ""
+      then src
+      else
+        builtins.path {
+          path = src + "/${subdir}";
+        };
     subdir = subdir;
     dependencies = spagoYamlJSON.package.test.dependencies ++ spagoYamlJSON.package.dependencies;
   }]);
 
 
-  buildSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') build-closure.packages;
-  testSourceGlobs = map (dep: ''"${dep.src}/${dep.subdir or ""}/src/**/*.purs"'') test-closure.packages;
+  buildSourceGlobs = map (dep: ''"${dep.src}/src/**/*.purs"'') build-closure.packages;
+  testSourceGlobs = map (dep: ''"${dep.src}/src/**/*.purs"'') test-closure.packages;
 
 
   runMain = spagoYamlJSON.package.main or "Main";
