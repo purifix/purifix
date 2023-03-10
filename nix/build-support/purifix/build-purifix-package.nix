@@ -174,6 +174,8 @@ let
       fixupPhase = "# don't clear output directory";
       passthru = {
         inherit build test develop bundle docs run;
+        bundle-default = bundle { };
+        bundle-app = bundle { app = true; };
       };
     });
 
@@ -197,7 +199,7 @@ let
           echo "import {main} from '${moduleFile}'; main()" | ${command} ${minification}
         ''
         else ''
-          ${command} ${module}
+          ${command} ${moduleFile}
         '';
       installPhase = ''
         mv bundle.js $out
