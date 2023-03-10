@@ -114,6 +114,9 @@
               src = ./examples/example-purenix-package;
               backend = pkgs.purenix;
             };
+            purescript-package = pkgs.purifix {
+              src = ./examples/purescript-package;
+            };
             remote-monorepo = pkgs.purifix {
               src = ./examples/remote-monorepo;
             };
