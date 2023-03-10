@@ -27,19 +27,19 @@ in
 , fetch-sources
 , backendCommand
 , withDocs ? true
+, filterPackages ? (pkg: true)
 }: final: inputs:
 let
   build-package = package:
     let
       get-dep = dep: final.${dep};
-      dependency-closure = fetch-sources {
-        inherit packages storage-backend;
-        dependencies = package.dependencies;
-      };
-      copyOutput = map (dep: ''${get-dep dep.pname}/output/*'') dependency-closure.packages;
-      caches = map (dep: ''${get-dep dep.pname}/output/cache-db.json'') dependency-closure.packages;
-
-      globs = map (dep: ''"${dep.src}/src/**/*.purs"'') dependency-closure.packages;
+      directs = builtins.listToAttrs (map (name: { name = name; value = get-dep name; }) package.dependencies);
+      transitive = builtins.foldl' (a: pkg: a // final.${pkg}.dependencies) { } package.dependencies;
+      dependencies = transitive // directs;
+      deps = builtins.attrNames dependencies;
+      copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages deps);
+      caches = map (dep: ''${get-dep dep}/output/cache-db.json'') (builtins.filter filterPackages deps);
+      globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') (builtins.filter filterPackages deps);
       value = stdenv.mkDerivation {
         pname = package.pname;
         version = package.version or "0.0.0";
@@ -77,6 +77,7 @@ let
         passthru = {
           inherit globs caches copyOutput;
           inherit package;
+          inherit dependencies;
         };
       };
     in
