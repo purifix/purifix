@@ -51,6 +51,15 @@ let
       ++ yaml.package.dependencies;
   };
 
+  all-locals = builtins.attrNames localPackages;
+  locals = if develop-packages == null then all-locals else develop-packages;
+  raw-develop-dependencies = builtins.concatLists (map (pkg: localPackages.${pkg}.yaml.package.dependencies) locals);
+  develop-dependencies = builtins.filter (dep: !(builtins.elem dep locals)) raw-develop-dependencies;
+  develop-closure = fetch-sources {
+    inherit packages storage-backend;
+    dependencies = develop-dependencies;
+  };
+
   compiler-version = package-set.compiler;
   compiler = purifix-compiler compiler-version;
   codegen = if backend == null then "js" else "corefn";
@@ -66,20 +75,28 @@ let
       withDocs;
   };
 
-  top-level = {
-    pname = yaml.package.name;
-    version = yaml.package.version or yaml.package.publish.version;
-    src = package-config.src;
-    repo = package-config.repo;
-    dependencies = yaml.package.dependencies;
+  top-level = pkg: {
+    pname = pkg.yaml.package.name;
+    version = pkg.yaml.package.version or pkg.yaml.package.publish.version;
+    src = pkg.src;
+    repo = pkg.repo;
+    dependencies = pkg.yaml.package.dependencies;
   };
-  build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ [ top-level ]);
+  build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ map top-level (builtins.attrValues localPackages));
 
-  top-level-test = top-level // {
-    dependencies = yaml.package.test.dependencies ++ yaml.package.dependencies;
+  top-level-test = pkg: top-level pkg // {
+    dependencies = pkg.yaml.package.test.dependencies ++ pkg.yaml.package.dependencies;
   };
-  test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ [ top-level-test ]);
+  test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ map top-level-test (builtins.attrValues localPackages));
 
+  dev-shell-package = {
+    pname = "purifix-dev-shell";
+    version = "0.0.0";
+    src = null;
+    subdir = null;
+    dependencies = develop-dependencies;
+  };
+  dev-pkgs = make-pkgs dev-pkgs (develop-closure.packages ++ [ dev-shell-package ]);
 
   runMain = yaml.package.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
@@ -93,30 +110,15 @@ let
   '';
 
   purifix =
-    let
-      all-locals = builtins.attrNames localPackages;
-      locals = if develop-packages == null then all-locals else develop-packages;
-      all-dependencies = map (pkg: build-pkgs.${pkg}.package.dependencies) locals;
-      dev-deps = builtins.filter (dep: !(builtins.elem dep all-locals)) (builtins.concatLists all-dependencies);
-      package = {
-        pname = "purifix-dev-shell";
-        version = "0.0.0";
-        src = null;
-        subdir = null;
-        dependencies = dev-deps;
-      };
-      deps-pkgs = make-pkgs deps-pkgs (build-closure.packages ++ [ package ]);
-      dev-globs = map (pkg: ''''${PURIFIX_ROOT:-.}/${build-pkgs.${pkg}.package.subdir}/src/**/*.purs'') locals;
-    in
     writeShellScriptBin "purifix"
       (prepareOutput
         {
-          inherit (deps-pkgs.purifix-dev-shell) globs caches copyOutput;
+          inherit (dev-pkgs.purifix-dev-shell) globs caches copyOutput;
         } + ''
-        purs compile --codegen ${codegen} ${toString deps-pkgs.purifix-dev-shell.globs} "$@"
+        purs compile --codegen ${codegen} ${toString dev-pkgs.purifix-dev-shell.globs} "$@"
         ${backendCommand}
       '') // {
-      inherit (deps-pkgs.purifix-dev-shell) globs caches copyOutput;
+      inherit (dev-pkgs.purifix-dev-shell) globs caches copyOutput;
     };
 
   run = writeShellScriptBin yaml.package.name ''
