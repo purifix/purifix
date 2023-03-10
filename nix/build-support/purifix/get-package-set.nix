@@ -9,8 +9,8 @@
 
 { package-set-config
 , extra-packages
+, repo ? null
 , src ? null
-, subdir ? ""
 }:
 
 let
@@ -24,7 +24,7 @@ let
     if builtins.hasAttr "registry" package-set-config
     then builtins.fromJSON (builtins.readFile "${purescript-registry}/package-sets/${registry-version}.json")
     else
-      if builtins.hasAttr "inline"
+      if builtins.hasAttr "inline" package-set-config
       then package-set-config.inline
       else
         builtins.fromJSON (builtins.readFile (fetchurl {
@@ -71,7 +71,7 @@ let
             src =
               if builtins.hasAttr "subdir" meta
               then builtins.path { path = repo + "/${meta.subdir}"; }
-              else repo;
+              else builtins.path { path = repo; };
             repo = repo;
             pname = package;
           } // lib.optionalAttrs (builtins.hasAttr "subdir" meta) {
@@ -92,7 +92,7 @@ let
               name = "get-relative-path-${package}";
               phases = [ "installPhase" ];
               installPhase = ''
-                realpath --relative-to="${src}" "${src}/${subdir}/${meta.path}" | tr -d '\n' | tee $out
+                realpath --relative-to="${repo}" "${src}/${meta.path}" | tr -d '\n' | tee $out
               '';
             });
             package-src =
@@ -107,11 +107,11 @@ let
                   path = src + "/${relative-path}";
                 }
             ;
-            repo = if absolute then package-src else src;
+            package-repo = if absolute then package-src else repo;
           in
           {
             type = "inline";
-            repo = repo;
+            repo = package-repo;
             src = package-src;
           } // lib.optionalAttrs (! absolute) {
             subdir = relative-path;
@@ -119,9 +119,17 @@ let
             inherit (meta) dependencies;
           }
         ;
+        parsed = {
+          type = "inline";
+          repo = meta.repo;
+          src = meta.src;
+          pname = meta.yaml.package.name;
+          dependencies = meta.yaml.package.dependencies or [ ];
+        };
       };
       package-type =
-        if builtins.hasAttr "path" meta then "local"
+        if builtins.hasAttr "yaml" meta then "parsed"
+        else if builtins.hasAttr "path" meta then "local"
         else if builtins.hasAttr "git" meta then "git"
         else builtins.throw "Cannot parse extra package ${package} with meta ${toString meta}";
     in

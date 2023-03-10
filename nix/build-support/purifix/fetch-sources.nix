@@ -3,7 +3,7 @@
 let
   closurePackage = key: {
     key = key;
-    package = packages.${key};
+    package = packages.${key} or (builtins.throw ''Missing package "${key}"'');
   };
 
   # Get transitive closure of dependencies starting with the dependencies of

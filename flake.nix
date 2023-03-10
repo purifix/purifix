@@ -83,10 +83,9 @@
             recent-registry-package-sets = builtins.listToAttrs (map to-package-set recent-package-set-versions);
             all-package-sets = pkgs.linkFarm "purifix-package-sets" (nixpkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
             new-package-sets = pkgs.linkFarm "recent-purifix-package-sets" (nixpkgs.lib.mapAttrsToList (name: path: { inherit name path; }) recent-registry-package-sets);
-            example-registry-package = pkgs.purifix {
-              subdir = "example-registry-package";
+            example-registry-package = (pkgs.purifix {
               src = ./examples;
-            };
+            }).example-purescript-package;
           in
           registry-package-sets // {
             inherit all-package-sets new-package-sets;
@@ -133,14 +132,9 @@
         # and spago.  This is convenient for making changes to
         # ./example-purescript-package. But most users can ignore this.
         purescript-dev-shell = (nixpkgsFor.${system}.purifix {
-          subdir = "example-registry-package";
           src = ./examples;
-        }).develop {
-          localPackages = [
-            "example-purescript-package"
-            "example-dependency"
-          ];
-        };
+          develop-packages = [ "example-purescript-package" "example-dependency" ];
+        }).example-purescript-package.develop;
         spago =
           let
             pkgs = nixpkgsFor.${system};

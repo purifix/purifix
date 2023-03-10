@@ -1,5 +1,5 @@
 package:
-  name: example-purescript-package
+  name: purescript-package
   version: 0.0.1
   dependencies: [ "console", "effect", "foldable-traversable", "prelude"]
 workspace:
