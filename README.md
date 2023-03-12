@@ -204,7 +204,7 @@ You can use `purifix` with monorepos containing multiple PureScript packages.
 
 If your `src` directory contains more than one package `purifix` will return an
 attribute set from package name to package. Set the `src` attribute of the call
-to `purifix` the root of your repository and let `purifix` search for your nested packages.
+`purifix` to the root of your repository and let `purifix` search for your nested packages.
 
 If your individual packages do not contain a `workspace` field to specify which package
 set to use `purifix` will try to parse `workspace` from a `spago.yaml` file in the root
