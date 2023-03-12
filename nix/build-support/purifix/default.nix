@@ -30,49 +30,49 @@ let
 
   # Parse the workspace global spago.yaml
   workspace = (fromYAML (builtins.readFile workspaceYaml)).workspace;
-  # Find and parse the spago.yaml package files into nix
   # TODO: Support the purs.json file instead/as well? It doesn't seem to
   # support extra_packages but could be ok if there's a global workspace spago.yaml.
-  find-candidate-packages = stdenv.mkDerivation {
-    name = "purifix-find-packages";
-    phases = [ "buildPhase" ];
-    nativeBuildInputs = [ findutils ];
-    buildPhase = ''
-      find ${src} -name 'spago.yaml' | xargs dirname | tee $out
-    '';
-  };
-  candidate-packages = builtins.readFile find-candidate-packages;
-  candidate-package-json =
+
+  # TODO: Follow symlinks? If so, how to deal with impure paths and path resolution?
+  # Find and parse the spago.yaml package files into nix
+  find-packages = workspace: dir:
     let
-      lines = lib.splitString "\n" candidate-packages;
-      non-empty = builtins.filter (p: p != "") lines;
-      yamls = map
-        (dir:
-          let
-            yamlPath = dir + "/spago.yaml";
-            yaml = fromYAML (builtins.readFile yamlPath);
-          in
-          {
-            repo = src;
-            src = dir;
-            yamlPath = yamlPath;
-            yaml = yaml;
-            workspace = yaml.workspace or workspace;
-          })
-        non-empty;
-      is-package = obj: builtins.hasAttr "package" obj.yaml;
-      ps = builtins.filter is-package yamls;
-      named = builtins.listToAttrs (map (p: { name = p.yaml.package.name; value = p; }) ps);
+      contents = builtins.readDir dir;
+      names = builtins.attrNames contents;
+      directoryNames = builtins.partition (name: contents.${name} == "directory") names;
+      directories = map (d: dir + "/${d}") directoryNames.right;
+      yamlPath = dir + "/spago.yaml";
+      yaml = fromYAML (builtins.readFile yamlPath);
+      next-workspace =
+        if has-config
+        then yaml.workspace or workspace
+        else workspace;
+      config = {
+        name = yaml.package.name;
+        value = {
+          repo = src;
+          src = dir;
+          yamlPath = yamlPath;
+          yaml = yaml;
+          workspace =
+            if next-workspace == null
+            then builtins.throw "No workspace for package ${yaml.package.name}"
+            else next-workspace;
+        };
+      };
+      has-config = builtins.hasAttr "spago.yaml" contents;
+      packages = lib.optionals (has-config && builtins.hasAttr "package" yaml) [ config ];
     in
-    named;
+    packages ++ builtins.concatLists (map (find-packages next-workspace) directories);
+
+  localPackages = builtins.listToAttrs (find-packages null src);
 
   build-package = callPackage ./build-purifix-package.nix {
     inherit fromYAML purescript-registry purescript-registry-index purescript-language-server;
   };
   package-names = builtins.attrNames candidate-package-json;
   build = name: package-config: build-package {
-    localPackages = candidate-package-json;
-    package-config = package-config;
+    inherit localPackages package-config;
     inherit backend backendCommand storage-backend develop-packages;
   };
 in
