@@ -98,7 +98,7 @@ let
   };
   dev-pkgs = make-pkgs dev-pkgs (develop-closure.packages ++ [ dev-shell-package ]);
 
-  runMain = yaml.package.main or "Main";
+  runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
 
   prepareOutput = { caches, globs, copyOutput, ... }: ''
