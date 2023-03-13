@@ -2,6 +2,8 @@
 , callPackage
 , purifix-compiler
 , writeShellScriptBin
+, writeText
+, runCommand
 , nodejs
 , lib
 , fromYAML
@@ -121,9 +123,21 @@ let
       inherit (dev-pkgs.purifix-dev-shell) globs caches copyOutput;
     };
 
-  run = writeShellScriptBin yaml.package.name ''
-    ${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from '${build}/output/${runMain}/index.js'; main();"
-  '';
+  runDir =
+    let
+      runScript = writeText "run.js" ''
+        import {main} from 'file://${build}/output/${runMain}/index.js';
+
+        main();
+      '';
+      packageJson = writeText "package.json" ''{"type": "module"}'';
+    in
+    runCommand "${yaml.package.name}-nodejs" { } ''
+      mkdir $out
+      cp ${runScript} $out/run.js
+      cp ${packageJson} $out/package.json
+    '';
+  run = writeShellScriptBin yaml.package.name ''${nodejs}/bin/node ${runDir}/run.js'';
 
   # TODO: figure out how to run tests with other backends, js only for now
   test =
