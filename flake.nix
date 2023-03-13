@@ -1,7 +1,7 @@
 {
   description = "Tool for building PureScript projects with Nix";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
+  inputs.nixpkgs.url = "nixpkgs"; #"github:NixOS/nixpkgs";
 
   inputs.purescript-registry.url = "github:purescript/registry";
   inputs.purescript-registry.flake = false;
@@ -84,25 +84,19 @@
             all-package-sets = pkgs.linkFarm "purifix-package-sets" (nixpkgs.lib.mapAttrsToList (name: path: { inherit name path; }) registry-package-sets);
             new-package-sets = pkgs.linkFarm "recent-purifix-package-sets" (nixpkgs.lib.mapAttrsToList (name: path: { inherit name path; }) recent-registry-package-sets);
             example-registry-package = (pkgs.purifix {
-              src = ./examples;
+              src = ./examples/local-monorepo;
             }).example-purescript-package;
+            conflict = pkgs.purifix {
+              src = ./examples/conflict;
+            };
           in
           registry-package-sets // {
             inherit all-package-sets new-package-sets;
           } // {
             inherit example-registry-package;
-            conflict = pkgs.purifix {
-              src = ./examples;
-              subdir = "top-level-conflict";
-            };
-            conflict-a = pkgs.purifix {
-              src = ./examples;
-              subdir = "dependency-conflict";
-            };
-            conflict-b = pkgs.purifix {
-              src = ./examples;
-              subdir = "dependency-conflict-b";
-            };
+            conflict = conflict.top-level-conflict;
+            conflict-a = conflict.dependency-conflict;
+            conflict-b = conflict.dependency-conflict-b;
             example-registry-package-test = example-registry-package.test;
             example-registry-package-run = example-registry-package.run;
             example-registry-package-bundle = example-registry-package.bundle {
