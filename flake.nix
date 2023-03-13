@@ -89,38 +89,50 @@
             conflict = pkgs.purifix {
               src = ./examples/conflict;
             };
+            examples = {
+              inherit example-registry-package;
+              conflict = conflict.top-level-conflict;
+              conflict-a = conflict.dependency-conflict;
+              conflict-b = conflict.dependency-conflict-b;
+              example-registry-package-test = example-registry-package.test;
+              example-registry-package-run = example-registry-package.run;
+              example-registry-package-bundle = example-registry-package.bundle {
+                app = true;
+                minify = true;
+              };
+              example-registry-package-docs = example-registry-package.docs { };
+              example-purenix-package = (pkgs.extend purenix.overlay).purifix {
+                src = ./examples/example-purenix-package;
+                backend = pkgs.purenix;
+              };
+              purescript-package = pkgs.purifix {
+                src = ./examples/purescript-package;
+              };
+              remote-monorepo = pkgs.purifix {
+                src = ./examples/remote-monorepo;
+              };
+              purenix-package-set = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+                package-set-config = {
+                  url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
+                  hash = "sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=";
+                };
+              };
+            };
+            all-examples = pkgs.linkFarmFromDrvs "purifix-examples" [
+              examples.example-registry-package
+              examples.example-registry-package-test
+              examples.example-registry-package-bundle
+              examples.example-registry-package-docs
+              examples.remote-monorepo
+            ];
           in
           registry-package-sets // {
             inherit all-package-sets new-package-sets;
-          } // {
-            inherit example-registry-package;
-            conflict = conflict.top-level-conflict;
-            conflict-a = conflict.dependency-conflict;
-            conflict-b = conflict.dependency-conflict-b;
-            example-registry-package-test = example-registry-package.test;
-            example-registry-package-run = example-registry-package.run;
-            example-registry-package-bundle = example-registry-package.bundle {
-              app = true;
-              minify = true;
-            };
-            example-registry-package-docs = example-registry-package.docs { };
-            example-purenix-package = (pkgs.extend purenix.overlay).purifix {
-              src = ./examples/example-purenix-package;
-              backend = pkgs.purenix;
-            };
-            purescript-package = pkgs.purifix {
-              src = ./examples/purescript-package;
-            };
-            remote-monorepo = pkgs.purifix {
-              src = ./examples/remote-monorepo;
-            };
-            purenix-package-set = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
-              package-set-config = {
-                url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
-                hash = "sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=";
-              };
-            };
-          });
+          }
+          // { inherit all-examples; }
+          // examples
+        );
+
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
 
