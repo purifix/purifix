@@ -11,7 +11,6 @@
 , jq
 , findutils
 , esbuild
-, withDocs ? true
 }:
 { localPackages
 , package-config
@@ -19,6 +18,7 @@
 , backendCommand
 , storage-backend
 , develop-packages
+, withDocs
 }:
 let
   workspace = package-config.workspace;
@@ -122,7 +122,7 @@ let
     };
 
   run = writeShellScriptBin yaml.package.name ''
-    ${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from '${build}/output/${runMain}/index.js'; main();"
+    ${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from 'file://${build}/output/${runMain}/index.js'; main();"
   '';
 
   # TODO: figure out how to run tests with other backends, js only for now
