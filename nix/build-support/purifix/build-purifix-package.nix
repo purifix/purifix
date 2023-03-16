@@ -11,6 +11,7 @@
 , jq
 , findutils
 , esbuild
+, runtimeShell
 }:
 { localPackages
 , package-config
@@ -19,6 +20,7 @@
 , storage-backend
 , develop-packages
 , withDocs
+, nodeModules
 }:
 let
   workspace = package-config.workspace;
@@ -121,9 +123,25 @@ let
       inherit (dev-pkgs.purifix-dev-shell) globs caches copyOutput;
     };
 
-  run = writeShellScriptBin yaml.package.name ''
-    ${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from 'file://${build}/output/${runMain}/index.js'; main();"
-  '';
+  run =
+    let evaluate = "import {main} from 'file://$out/output/${runMain}/index.js'; main();";
+    in stdenv.mkDerivation {
+      pname = yaml.package.name;
+      version = yaml.package.version or "0.0.0";
+      phases = [ "installPhase" "fixupPhase" ];
+      installPhase = ''
+        mkdir $out
+        mkdir $out/bin
+      '' + lib.optionalString (nodeModules != null) ''
+        ln -s ${nodeModules} $out/node_modules
+      '' +
+      ''
+        cp -rv ${build}/output $out/output
+        echo "#!${runtimeShell}" >> $out/bin/${yaml.package.name}
+        echo "${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval=\"${evaluate}\"" >> $out/bin/${yaml.package.name}
+        chmod +x $out/bin/${yaml.package.name}
+      '';
+    };
 
   # TODO: figure out how to run tests with other backends, js only for now
   test =
