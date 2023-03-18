@@ -1,11 +1,11 @@
-{ jq, stdenv, lib, python3, writeText }:
+{ jq, stdenv, lib, python3, writeText, linkFiles }:
 let
   # TODO: remove python dependency due to this script
   # This script will load the cache-db.json from the output folder and remove
   # all keys present in the dependencies' cache-db files. This results in that
   # each package only stores the modules that are defined in that package in
   # its cache-db.json
-  reduce-chache-db = writeText "chache-db.py" ''
+  reduce-cache-db = writeText "cache-db.py" ''
     import json
     import sys
 
@@ -37,9 +37,28 @@ let
       transitive = builtins.foldl' (a: pkg: a // final.${pkg}.dependencies) { } package.dependencies;
       dependencies = transitive // directs;
       deps = builtins.attrNames dependencies;
-      copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages deps);
+      direct-deps = builtins.attrNames directs;
+      copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages direct-deps);
       caches = map (dep: ''${get-dep dep}/output/cache-db.json'') (builtins.filter filterPackages deps);
       globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') (builtins.filter filterPackages deps);
+      copy-deps = stdenv.mkDerivation {
+        pname = "${package.pname}-deps";
+        version = package.version or "0.0.0";
+        phases = [ "preparePhase" "installPhase" ];
+        preparePhase = ''
+          mkdir -p output
+        '' + lib.optionalString (builtins.length package.dependencies > 0) ''
+          echo ${toString copyOutput} | xargs ${linkFiles} output
+          chmod -R +w output
+          rm output/cache-db.json
+          rm output/package.json
+          ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
+        '';
+        installPhase = ''
+          mkdir -p "$out"
+          mv output "$out/"
+        '';
+      };
       value = stdenv.mkDerivation {
         pname = package.pname;
         version = package.version or "0.0.0";
@@ -50,8 +69,10 @@ let
         preparePhase = ''
           mkdir -p output
         '' + lib.optionalString (builtins.length package.dependencies > 0) ''
-          echo ${toString copyOutput} | xargs cp -r --preserve --no-clobber -t output/
+          echo ${toString copyOutput} | xargs ${linkFiles} output
           chmod -R +w output
+          rm output/cache-db.json
+          rm output/package.json
           ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
         '';
         buildPhase = ''
@@ -60,24 +81,17 @@ let
         '';
         installPhase = ''
           mkdir -p "$out"
-          cp -r output "$out/"
+          mv output "$out/"
         '';
         fixupPhase = ''
-          for file in ${toString copyOutput}; do
-            name="$(basename "$file")";
-            if [ "$name" == "cache-db.json" ]; then
-              true # skip
-            else
-              rm -rf "$out/output/$name"
-            fi
-          done
-          ${python3}/bin/python ${reduce-chache-db} $out/output/cache-db.json ${toString caches} > cache-db.json
+          ${python3}/bin/python ${reduce-cache-db} $out/output/cache-db.json ${toString caches} > cache-db.json
           mv cache-db.json $out/output/cache-db.json
         '';
         passthru = {
           inherit globs caches copyOutput;
           inherit package;
           inherit dependencies;
+          deps = copy-deps;
         };
       };
     in

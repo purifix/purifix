@@ -17,6 +17,7 @@
 , backendCommand ? lib.optionalString (backend != null) "${backend}/bin/${backend.pname}"
 }:
 let
+  linkFiles = callPackage ./link-files.nix { };
   inherit
     (callPackage ./get-package-set.nix
       { inherit fromYAML purescript-registry purescript-registry-index; }
@@ -30,7 +31,7 @@ let
     inherit packages storage-backend;
     dependencies = builtins.attrNames packages;
   };
-  make-pkgs = callPackage ./make-package-set.nix { } {
+  make-pkgs = callPackage ./make-package-set.nix { inherit linkFiles; } {
     inherit storage-backend
       packages
       codegen

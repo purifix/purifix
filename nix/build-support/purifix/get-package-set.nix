@@ -167,7 +167,7 @@ let
         if l == 2 then "2/${package}"
         else if l == 3 then "3/${builtins.substring 0 1 package}/${package}"
         else "${builtins.substring 0 2 package}/${builtins.substring 2 2 package}/${package}";
-      meta = builtins.trace "reading metadata for ${package}-${version}" (read-meta version "${purescript-registry-index}/${path}");
+      meta = read-meta version "${purescript-registry-index}/${path}";
     in
     value // {
       type = "registry";
