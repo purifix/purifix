@@ -122,15 +122,15 @@ let
           type = "inline";
           repo = meta.repo;
           src = meta.src;
-          pname = meta.yaml.package.name;
-          dependencies = meta.yaml.package.dependencies or [ ];
+          pname = meta.config.package.name;
+          dependencies = meta.config.package.dependencies or [ ];
         };
       };
       package-type =
-        if builtins.hasAttr "yaml" meta then "parsed"
+        if builtins.hasAttr "config" meta then "parsed"
         else if builtins.hasAttr "path" meta then "local"
         else if builtins.hasAttr "git" meta then "git"
-        else builtins.throw "Cannot parse extra package ${package} with meta ${toString meta}";
+        else builtins.throw "Cannot parse extra package ${package} with meta ${toString (builtins.toJSON meta)}";
     in
     packageConfig.${package-type};
 
@@ -179,12 +179,18 @@ let
   lookupSource = package: meta:
     let
       targetPursJSON = builtins.fromJSON (builtins.readFile "${meta.src}/purs.json");
+      targetPurifixJSON = builtins.fromJSON (builtins.readFile "${meta.src}/purifix.json");
       targetSpagoYAML = fromYAML (builtins.readFile "${meta.src}/spago.yaml");
       toList = x: if builtins.typeOf x == "list" then x else builtins.attrNames x;
       dependencies =
-        if builtins.pathExists "${meta.src}/purs.json"
-        then toList (targetPursJSON.dependencies or { })
-        else toList (targetSpagoYAML.package.dependencies or [ ]);
+        if builtins.pathExists "${meta.src}/purifix.json"
+        then
+          toList (targetPurifixJSON.dependencies or [ ])
+        else if builtins.pathExists "${meta.src}/purs.json"
+        then
+          toList (targetPursJSON.dependencies or { })
+        else
+          toList (targetSpagoYAML.package.dependencies or [ ]);
     in
     meta // {
       type = "inline";

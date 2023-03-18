@@ -136,27 +136,31 @@
 
       # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
 
-      devShells = forAllSystems (system: {
-        # This purescript development shell just contains dhall, purescript,
-        # and spago.  This is convenient for making changes to
-        # ./example-purescript-package. But most users can ignore this.
-        purescript-dev-shell = (nixpkgsFor.${system}.purifix {
-          src = ./examples;
-          develop-packages = [ "example-purescript-package" "example-dependency" ];
-        }).example-purescript-package.develop;
-        spago =
-          let
-            pkgs = nixpkgsFor.${system};
-            easy-ps = import easy-purescript-nix {
-              pkgs = pkgs;
-            };
-          in
-          pkgs.mkShell {
+      devShells = forAllSystems (system:
+        let
+          pkgs = nixpkgsFor.${system};
+          easy-ps = import easy-purescript-nix {
+            pkgs = pkgs;
+          };
+        in
+        {
+          default = pkgs.mkShell {
+            name = "purifix-shell";
+            buildInputs = [ easy-ps.purs-0_15_7 pkgs.yaml2json pkgs.jq ];
+          };
+          # This purescript development shell just contains dhall, purescript,
+          # and spago.  This is convenient for making changes to
+          # ./example-purescript-package. But most users can ignore this.
+          purescript-dev-shell = (nixpkgsFor.${system}.purifix {
+            src = ./examples;
+            develop-packages = [ "example-purescript-package" "example-dependency" ];
+          }).example-purescript-package.develop;
+          spago = pkgs.mkShell {
             name = "spago-shell";
             buildInputs = [ easy-ps.spago easy-ps.purs-0_15_7 ];
           };
-      });
+        });
 
-      devShell = forAllSystems (system: self.devShells.${system}.purescript-dev-shell);
+      devShell = forAllSystems (system: self.devShells.${system}.default);
     };
 }

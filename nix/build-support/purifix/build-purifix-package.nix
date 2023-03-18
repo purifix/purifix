@@ -24,7 +24,7 @@
 }:
 let
   workspace = package-config.workspace;
-  yaml = package-config.yaml;
+  yaml = package-config.config;
   src = package-config.repo;
   package-set-config = workspace.package_set or workspace.set;
   extra-packages = (workspace.extra_packages or { }) // localPackages;
@@ -55,7 +55,7 @@ let
 
   all-locals = builtins.attrNames localPackages;
   locals = if develop-packages == null then all-locals else develop-packages;
-  raw-develop-dependencies = builtins.concatLists (map (pkg: localPackages.${pkg}.yaml.package.dependencies) locals);
+  raw-develop-dependencies = builtins.concatLists (map (pkg: localPackages.${pkg}.config.package.dependencies) locals);
   develop-dependencies = builtins.filter (dep: !(builtins.elem dep locals)) raw-develop-dependencies;
   develop-closure = fetch-sources {
     inherit packages storage-backend;
@@ -78,16 +78,16 @@ let
   };
 
   top-level = pkg: {
-    pname = pkg.yaml.package.name;
-    version = pkg.yaml.package.version or pkg.yaml.package.publish.version;
+    pname = pkg.config.package.name;
+    version = pkg.config.package.version or pkg.config.package.publish.version;
     src = pkg.src;
     repo = pkg.repo;
-    dependencies = pkg.yaml.package.dependencies;
+    dependencies = pkg.config.package.dependencies;
   };
   build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ map top-level (builtins.attrValues localPackages));
 
   top-level-test = pkg: top-level pkg // {
-    dependencies = pkg.yaml.package.test.dependencies ++ pkg.yaml.package.dependencies;
+    dependencies = pkg.config.package.test.dependencies ++ pkg.config.package.dependencies;
   };
   test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ map top-level-test (builtins.attrValues localPackages));
 

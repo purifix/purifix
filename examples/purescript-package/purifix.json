@@ -1,0 +1,17 @@
+{
+  "package": {
+    "dependencies": [
+      "console",
+      "effect",
+      "foldable-traversable",
+      "prelude"
+    ],
+    "name": "purescript-package",
+    "version": "0.0.1"
+  },
+  "workspace": {
+    "set": {
+      "registry": "11.3.0"
+    }
+  }
+}
