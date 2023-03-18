@@ -14,6 +14,8 @@
 , extra-packages ? { }
 , storage-backend ? package: "https://packages.registry.purescript.org/${package.pname}/${package.version}.tar.gz"
 , backend ? null
+, copyFiles ? false
+, withDocs ? false
 , backendCommand ? lib.optionalString (backend != null) "${backend}/bin/${backend.pname}"
 }:
 let
@@ -37,8 +39,10 @@ let
       codegen
       compiler
       fetch-sources
-      backendCommand;
-    withDocs = false;
+      backendCommand
+      withDocs
+      copyFiles
+      ;
   };
   pkgs = make-pkgs pkgs closure.packages;
   paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;

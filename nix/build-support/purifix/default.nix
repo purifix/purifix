@@ -24,6 +24,7 @@
 , develop-packages ? null
 , allowMultiWorkspaceBuild ? false
 , withDocs ? true
+, copyFiles ? false
 , nodeModules ? null
 , localPackages ? null
 }:
@@ -126,7 +127,7 @@ let
     build-package {
       localPackages = localPackages_;
       inherit package-config;
-      inherit backend backendCommand storage-backend develop-packages withDocs nodeModules;
+      inherit backend backendCommand storage-backend develop-packages withDocs copyFiles nodeModules;
     };
 in
 if builtins.length package-names == 1 then

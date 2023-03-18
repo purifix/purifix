@@ -26,7 +26,8 @@ in
 , compiler
 , fetch-sources
 , backendCommand
-, withDocs ? true
+, withDocs
+, copyFiles
 , filterPackages ? (pkg: true)
 }: final: inputs:
 let
@@ -41,19 +42,25 @@ let
       copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages direct-deps);
       caches = map (dep: ''${get-dep dep}/output/cache-db.json'') (builtins.filter filterPackages deps);
       globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') (builtins.filter filterPackages deps);
+      prepareCommand =
+        if copyFiles then
+          "echo ${toString copyOutput} | xargs cp --no-clobber -r --preserve -t output"
+        else
+          "echo ${toString copyOutput} | xargs ${linkFiles} output";
+      preparePhase = ''
+        mkdir -p output
+      '' + lib.optionalString (builtins.length direct-deps > 0) ''
+        ${prepareCommand}
+        chmod -R +w output
+        rm output/cache-db.json
+        rm output/package.json
+        ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
+      '';
       copy-deps = stdenv.mkDerivation {
         pname = "${package.pname}-deps";
         version = package.version or "0.0.0";
         phases = [ "preparePhase" "installPhase" ];
-        preparePhase = ''
-          mkdir -p output
-        '' + lib.optionalString (builtins.length package.dependencies > 0) ''
-          echo ${toString copyOutput} | xargs ${linkFiles} output
-          chmod -R +w output
-          rm output/cache-db.json
-          rm output/package.json
-          ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
-        '';
+        inherit preparePhase;
         installPhase = ''
           mkdir -p "$out"
           mv output "$out/"
@@ -66,15 +73,7 @@ let
         nativeBuildInputs = [
           compiler
         ];
-        preparePhase = ''
-          mkdir -p output
-        '' + lib.optionalString (builtins.length package.dependencies > 0) ''
-          echo ${toString copyOutput} | xargs ${linkFiles} output
-          chmod -R +w output
-          rm output/cache-db.json
-          rm output/package.json
-          ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
-        '';
+        inherit preparePhase;
         buildPhase = ''
           purs compile --codegen "${codegen}${lib.optionalString withDocs ",docs"}" ${toString globs} "${package.src}/src/**/*.purs"
           ${backendCommand}
