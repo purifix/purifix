@@ -1,5 +1,4 @@
-{ jq
-, fromYAML
+{ fromYAML
 , purescript-registry
 , purescript-registry-index
 , fetchurl
@@ -148,6 +147,15 @@ let
 
   registryPackages = basePackages // extraPackages;
 
+  read-meta = version: file:
+    let
+      text = builtins.readFile file;
+      lines = builtins.filter (line: line != "") (lib.splitString "\n" text);
+      values = lib.reverseList (map builtins.fromJSON lines);
+      byVersion = builtins.listToAttrs (map (x: { name = x.version; value = x; }) values);
+    in
+    byVersion.${version};
+
   # Lookup metadata in the registry-index by finding the line-separated JSON
   # manifest file in the repo matching the package and filtering out the object
   # matching the required version.
@@ -159,13 +167,7 @@ let
         if l == 2 then "2/${package}"
         else if l == 3 then "3/${builtins.substring 0 1 package}/${package}"
         else "${builtins.substring 0 2 package}/${builtins.substring 2 2 package}/${package}";
-      meta = builtins.fromJSON (builtins.readFile (stdenv.mkDerivation {
-        preferLocalBuild = true;
-        allowSubstitutes = false;
-        name = "index-registry-meta-${package}";
-        phases = [ "buildPhase" ];
-        buildPhase = ''${jq}/bin/jq -s '.[] | select (.version == "${version}")' < "${purescript-registry-index}/${path}" > $out '';
-      }));
+      meta = builtins.trace "reading metadata for ${package}-${version}" (read-meta version "${purescript-registry-index}/${path}");
     in
     value // {
       type = "registry";
