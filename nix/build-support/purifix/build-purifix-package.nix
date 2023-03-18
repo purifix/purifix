@@ -152,6 +152,7 @@ let
         '';
         installPhase = ''
           cp -r -L output test-output
+          ${lib.optionalString (nodeModules != null) "ln -s ${nodeModules} node_modules"}
           node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './test-output/${testMain}/index.js'; main();" | tee $out
         '';
         fixupPhase = "#nothing to be done here";
