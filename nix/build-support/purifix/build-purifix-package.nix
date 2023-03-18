@@ -21,6 +21,7 @@
 , develop-packages
 , withDocs
 , nodeModules
+, copyFiles
 }:
 let
   linkFiles = callPackage ./link-files.nix { };
@@ -75,7 +76,9 @@ let
       compiler
       fetch-sources
       backendCommand
-      withDocs;
+      withDocs
+      copyFiles
+      ;
   };
 
   top-level = pkg: {
