@@ -37,9 +37,28 @@ let
       transitive = builtins.foldl' (a: pkg: a // final.${pkg}.dependencies) { } package.dependencies;
       dependencies = transitive // directs;
       deps = builtins.attrNames dependencies;
-      copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages deps);
+      direct-deps = builtins.attrNames directs;
+      copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages direct-deps);
       caches = map (dep: ''${get-dep dep}/output/cache-db.json'') (builtins.filter filterPackages deps);
       globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') (builtins.filter filterPackages deps);
+      copy-deps = stdenv.mkDerivation {
+        pname = "${package.pname}-deps";
+        version = package.version or "0.0.0";
+        phases = [ "preparePhase" "installPhase" ];
+        preparePhase = ''
+          mkdir -p output
+        '' + lib.optionalString (builtins.length package.dependencies > 0) ''
+          echo ${toString copyOutput} | xargs ${linkFiles} output
+          chmod -R +w output
+          rm output/cache-db.json
+          rm output/package.json
+          ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
+        '';
+        installPhase = ''
+          mkdir -p "$out"
+          mv output "$out/"
+        '';
+      };
       value = stdenv.mkDerivation {
         pname = package.pname;
         version = package.version or "0.0.0";
@@ -50,7 +69,7 @@ let
         preparePhase = ''
           mkdir -p output
         '' + lib.optionalString (builtins.length package.dependencies > 0) ''
-          echo ${toString copyOutput} | xargs ${linkFiles}
+          echo ${toString copyOutput} | xargs ${linkFiles} output
           chmod -R +w output
           rm output/cache-db.json
           rm output/package.json
@@ -72,6 +91,7 @@ let
           inherit globs caches copyOutput;
           inherit package;
           inherit dependencies;
+          deps = copy-deps;
         };
       };
     in

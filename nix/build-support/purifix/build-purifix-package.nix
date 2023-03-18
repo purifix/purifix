@@ -104,26 +104,15 @@ let
   runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
 
-  prepareOutput = { caches, globs, copyOutput, ... }: ''
+  purifix = (writeShellScriptBin "purifix" ''
     mkdir -p output
-  '' + lib.optionalString (builtins.length caches > 0) ''
-    echo ${toString copyOutput} | xargs ${linkFiles}
-    rm output/cache-db.json output/package.json
+    cp --no-clobber --preserve -r -L -t output ${dev-pkgs.purifix-dev-shell.deps}/output/*
     chmod -R +w output
-    ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
-  '';
-
-  purifix =
-    writeShellScriptBin "purifix"
-      (prepareOutput
-        {
-          inherit (dev-pkgs.purifix-dev-shell) globs caches copyOutput;
-        } + ''
-        purs compile --codegen ${codegen} ${toString dev-pkgs.purifix-dev-shell.globs} "$@"
-        ${backendCommand}
-      '') // {
-      inherit (dev-pkgs.purifix-dev-shell) globs caches copyOutput;
-    };
+    purs compile --codegen ${codegen} ${toString dev-pkgs.purifix-dev-shell.globs} "$@"
+    ${backendCommand}
+  '') // {
+    globs = dev-pkgs.purifix-dev-shell.globs;
+  };
 
   run =
     let evaluate = "import {main} from 'file://$out/output/${runMain}/index.js'; main();";
@@ -135,7 +124,7 @@ let
         mkdir $out
         mkdir $out/bin
         ${lib.optionalString (nodeModules != null) "ln -s ${nodeModules} $out/node_modules"}
-        cp -L -rv ${build}/output $out/output
+        cp --preserve -L -rv ${build}/output $out/output
         echo "#!${runtimeShell}" >> $out/bin/${yaml.package.name}
         echo "${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval=\"${evaluate}\"" >> $out/bin/${yaml.package.name}
         chmod +x $out/bin/${yaml.package.name}
@@ -168,7 +157,10 @@ let
       nativeBuildInputs = [
         compiler
       ];
-      buildPhase = (prepareOutput build-pkgs.${yaml.package.name}) + ''
+      buildPhase = ''
+        mkdir output
+        cp --no-clobber --preserve -r -L -t output ${build-pkgs.${yaml.package.name}.deps}/output/*
+        chmod -R +w output
         purs docs --format ${format} ${toString globs} "$src/**/*.purs" --output docs
       '';
       installPhase = ''

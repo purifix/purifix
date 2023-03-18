@@ -1,5 +1,7 @@
 { writeShellScript }:
 writeShellScript "link-files" ''
+  outdir="$1"
+  shift
   copies=()
   links=()
   declare -A visited
@@ -11,14 +13,14 @@ writeShellScript "link-files" ''
      visited[$name]=1
      if [[ "$name" == Prim* ]]; then
         copies+=( "$file" )
-     elif [ ! -e "output/$name" ]; then
+     elif [ ! -e "$outdir/$name" ]; then
         links+=( "$file" )
      fi
   done
   if [[ ''${#copies[*]} > 0 ]]; then
-    cp -r --no-clobber -t output "''${copies[@]}"
+    cp -r --no-clobber -t "$outdir" "''${copies[@]}"
   fi
   if [[ ''${#links[*]} > 0 ]]; then
-    ln -s -t output "''${links[@]}"
+    ln -s -t "$outdir" "''${links[@]}"
   fi
 ''
