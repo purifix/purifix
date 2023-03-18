@@ -23,6 +23,7 @@
 , nodeModules
 }:
 let
+  linkFiles = callPackage ./link-files.nix { };
   workspace = package-config.workspace;
   yaml = package-config.config;
   src = package-config.repo;
@@ -67,7 +68,7 @@ let
   codegen = if backend == null then "js" else "corefn";
 
 
-  make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { }) {
+  make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { inherit linkFiles; }) {
     inherit storage-backend
       packages
       codegen
@@ -106,7 +107,8 @@ let
   prepareOutput = { caches, globs, copyOutput, ... }: ''
     mkdir -p output
   '' + lib.optionalString (builtins.length caches > 0) ''
-    cp -r --preserve --no-clobber -t output/ ${toString copyOutput}
+    echo ${toString copyOutput} | xargs ${linkFiles}
+    rm output/cache-db.json output/package.json
     chmod -R +w output
     ${jq}/bin/jq -s add ${toString caches} > output/cache-db.json
   '';
@@ -132,11 +134,8 @@ let
       installPhase = ''
         mkdir $out
         mkdir $out/bin
-      '' + lib.optionalString (nodeModules != null) ''
-        ln -s ${nodeModules} $out/node_modules
-      '' +
-      ''
-        cp -rv ${build}/output $out/output
+        ${lib.optionalString (nodeModules != null) "ln -s ${nodeModules} $out/node_modules"}
+        cp -L -rv ${build}/output $out/output
         echo "#!${runtimeShell}" >> $out/bin/${yaml.package.name}
         echo "${nodejs}/bin/node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval=\"${evaluate}\"" >> $out/bin/${yaml.package.name}
         chmod +x $out/bin/${yaml.package.name}
@@ -152,7 +151,8 @@ let
           purs compile ${toString old.passthru.globs} "${old.passthru.package.src}/${old.passthru.package.subdir or ""}/test/**/*.purs"
         '';
         installPhase = ''
-          node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './output/${testMain}/index.js'; main();" | tee $out
+          cp -r -L output test-output
+          node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './test-output/${testMain}/index.js'; main();" | tee $out
         '';
         fixupPhase = "#nothing to be done here";
       });
