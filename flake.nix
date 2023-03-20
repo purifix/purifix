@@ -152,8 +152,7 @@
           # and spago.  This is convenient for making changes to
           # ./example-purescript-package. But most users can ignore this.
           purescript-dev-shell = (nixpkgsFor.${system}.purifix {
-            src = ./examples;
-            develop-packages = [ "example-purescript-package" "example-dependency" ];
+            src = ./examples/local-monorepo;
           }).example-purescript-package.develop;
           spago = pkgs.mkShell {
             name = "spago-shell";
