@@ -212,7 +212,7 @@ of your `src` folder.
 
 ```nix
 (purifix {
-  src = ./examples;
+  src = ./examples/local-monorepo;
 }).example-purescript-package
 ```
 
@@ -220,7 +220,7 @@ of your `src` folder.
 
 ```nix
 (purifix {
-  src = ./examples;
+  src = ./examples/local-monorepo;
 }).example-purescript-package.test
 ```
 
@@ -228,7 +228,7 @@ of your `src` folder.
 
 ```nix
 (purifix {
-  src = ./examples;
+  src = ./examples/local-monorepo;
 }).example-purescript-package.run
 ```
 
