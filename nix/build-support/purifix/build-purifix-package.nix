@@ -15,10 +15,9 @@
 }:
 { localPackages
 , package-config
-, backend
-, backendCommand
 , storage-backend
 , develop-packages
+, backends
 , withDocs
 , nodeModules
 , copyFiles
@@ -43,16 +42,22 @@ let
   # of the build dependencies;
   build-closure = fetch-sources {
     inherit packages storage-backend;
-    dependencies = yaml.package.dependencies;
+    dependencies = [ yaml.package.name ]
+      ++ (yaml.package.dependencies or [ ]);
   };
 
   # Download the source code for each package in the transitive closure
   # of the build and test dependencies;
   test-closure = fetch-sources {
     inherit packages storage-backend;
-    dependencies =
-      yaml.package.test.dependencies
-      ++ yaml.package.dependencies;
+    dependencies = [ yaml.package.name ]
+      ++ (yaml.package.test.dependencies or [ ])
+      ++ (yaml.package.dependencies or [ ]);
+  };
+
+  package-set-closure = fetch-sources {
+    inherit packages storage-backend;
+    dependencies = builtins.attrNames packages;
   };
 
   all-locals = builtins.attrNames localPackages;
@@ -66,34 +71,22 @@ let
 
   compiler-version = package-set.compiler;
   compiler = purifix-compiler compiler-version;
-  codegen = if backend == null then "js" else "corefn";
-
 
   make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { inherit linkFiles; }) {
+    backend = workspace.backend or { };
     inherit storage-backend
       packages
-      codegen
       compiler
       fetch-sources
-      backendCommand
       withDocs
+      backends
       copyFiles
       ;
   };
 
-  top-level = pkg: {
-    pname = pkg.config.package.name;
-    version = pkg.config.package.version or pkg.config.package.publish.version;
-    src = pkg.src;
-    repo = pkg.repo;
-    dependencies = pkg.config.package.dependencies;
-  };
-  build-pkgs = make-pkgs build-pkgs (build-closure.packages ++ map top-level (builtins.attrValues localPackages));
+  build-pkgs = make-pkgs build-pkgs build-closure.packages;
 
-  top-level-test = pkg: top-level pkg // {
-    dependencies = pkg.config.package.test.dependencies ++ pkg.config.package.dependencies;
-  };
-  test-pkgs = make-pkgs test-pkgs (test-closure.packages ++ map top-level-test (builtins.attrValues localPackages));
+  test-pkgs = make-pkgs test-pkgs test-closure.packages;
 
   dev-shell-package = {
     pname = "purifix-dev-shell";
@@ -104,8 +97,12 @@ let
   };
   dev-pkgs = make-pkgs dev-pkgs (develop-closure.packages ++ [ dev-shell-package ]);
 
+  pkgs = make-pkgs pkgs package-set-closure.packages;
+
   runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
+  backendCommand = yaml.pacakge.backend or "";
+  codegen = if backendCommand == "" then "js" else "corefn";
 
   purifix = (writeShellScriptBin "purifix" ''
     mkdir -p output
@@ -188,10 +185,11 @@ let
   build = build-pkgs.${yaml.package.name}.overrideAttrs
     (old: {
       fixupPhase = "# don't clear output directory";
-      passthru = {
+      passthru = old.passthru // {
         inherit build test develop bundle docs run;
         bundle-default = bundle { };
         bundle-app = bundle { app = true; };
+        package-set = pkgs;
       };
     });
 
