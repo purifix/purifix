@@ -1,17 +1,16 @@
 # purifix
 
-This is a Nix function for easily building PureScript projects with Nix.
+Build PureScript projects from a `spago.yaml` file with a Nix
+function instead of `spago`.
 
-The advantage of `purifix` is that your `spago.yaml` file acts as a
-single source of truth.  When you update dependencies in `spago.yaml` you don't
-need to update the Nix expression at all.  It automatically picks up changes
-from the YAML file.
+Like with `spago`, with `purifix` your `spago.yaml` file acts as a
+single source of truth. When you change `spago.yaml` you don’t
+need to change the Nix expression, `purifix` automatically picks up
+the changes.
 
-Using `purifix` on a PureScript package looks like the
-following. This is how you would build the PureScript package
+For example, this is how you would build the PureScript package
 [`./examples/purescript-package/`](./examples/purescript-package/)
 with `purifix`:
-
 
 ```nix
 purifix {
@@ -83,7 +82,7 @@ in purifix {
 }
 ```
 
-It's recommended to pin the fetched purifix commit using the `rev` attribute so
+It's recommended to pin the fetched `purifix` commit using the `rev` attribute so
 that your builds remain reproducible.
 
 ## Building the derivation produced by `purifix`
