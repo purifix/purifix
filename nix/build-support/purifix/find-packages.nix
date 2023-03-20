@@ -34,7 +34,7 @@ let
         2. call `purifix` on a source tree that only defines a single workspace
         3. exclude a subtree from the `src` using `lib.cleanSourceWith` or `nix-filter`.
       '';
-  parse-package = workspace: dir: configPath: obj:
+  parse-package = workspace: dir: trail: configPath: obj:
     let
       this-workspace =
         if obj != null && builtins.hasAttr "workspace" obj then {
@@ -48,6 +48,7 @@ let
         value = {
           repo = src;
           src = dir;
+          inherit trail;
           inherit configPath;
           config = obj;
           workspace =
@@ -62,27 +63,27 @@ let
       inherit next-workspace;
       config = if obj != null && builtins.hasAttr "package" obj then config else null;
     };
-  find-packages = workspace: dir:
+  find-packages = workspace: trail: dir:
     let
       contents = builtins.readDir dir;
       has-yaml = builtins.hasAttr "spago.yaml" contents;
       has-json = builtins.hasAttr "purifix.json" contents;
       names = builtins.attrNames contents;
       directoryNames = builtins.partition (name: contents.${name} == "directory") names;
-      directories = map (d: dir + "/${d}") directoryNames.right;
+      directories = map (d: f: f (trail ++ [ d ]) (dir + "/${d}")) directoryNames.right;
       yamlPath = dir + "/spago.yaml";
       yaml = if has-yaml then fromYAML (builtins.readFile yamlPath) else null;
       jsonPath = dir + "/purifix.json";
       json = if has-json then builtins.fromJSON (builtins.readFile jsonPath) else null;
       cfg =
-        if has-json then parse-package workspace dir jsonPath json
-        else if has-yaml then parse-package workspace dir yamlPath yaml
+        if has-json then parse-package workspace dir trail jsonPath json
+        else if has-yaml then parse-package workspace dir trail yamlPath yaml
         else {
           next-workspace = workspace;
           config = null;
         };
     in
     lib.optionals (cfg.config != null) [ cfg.config ] ++
-    builtins.concatLists (map (find-packages cfg.next-workspace) directories);
+    builtins.concatLists (map (k: k (find-packages cfg.next-workspace)) directories);
 in
 find-packages

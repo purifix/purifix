@@ -34,7 +34,7 @@ let
     { inherit allowMultiWorkspaceBuild src; };
   localPackages_ =
     if localPackages == null then
-      builtins.listToAttrs (find-packages null src)
+      builtins.listToAttrs (find-packages null [ ] src)
     else localPackages;
 
   build-package = callPackage ./build-purifix-package.nix {

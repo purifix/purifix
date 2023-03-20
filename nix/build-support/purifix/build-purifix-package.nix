@@ -114,6 +114,15 @@ let
     globs = dev-pkgs.purifix-dev-shell.globs;
   };
 
+  purifix-project =
+    let
+      relative = trail: lib.concatStringsSep "/" trail;
+      projectGlobs = lib.mapAttrsToList (name: pkg: ''"''${PURIFIX_ROOT:-.}/${relative pkg.trail}/src/**/*.purs"'') localPackages;
+    in
+    writeShellScriptBin "purifix-project" ''
+      purifix ${toString projectGlobs} "$@"
+    '';
+
   run =
     let evaluate = "import {main} from 'file://$out/output/${runMain}/index.js'; main();";
     in stdenv.mkDerivation {
@@ -176,6 +185,7 @@ let
         compiler
         purescript-language-server
         purifix
+        purifix-project
       ];
       shellHook = ''
         export PURS_IDE_SOURCES='${toString purifix.globs}'
