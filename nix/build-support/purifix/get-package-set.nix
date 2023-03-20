@@ -118,7 +118,7 @@ let
             inherit (meta) dependencies;
           }
         ;
-        parsed = {
+        parsed = meta.config.package // {
           type = "inline";
           repo = meta.repo;
           src = meta.src;

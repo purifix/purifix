@@ -28,18 +28,19 @@ let
     package-set;
   fetch-sources = callPackage ./fetch-sources.nix { };
   compiler = purifix-compiler package-set.compiler;
-  codegen = if backend == null then "js" else "corefn";
   closure = fetch-sources {
     inherit packages storage-backend;
     dependencies = builtins.attrNames packages;
   };
   make-pkgs = callPackage ./make-package-set.nix { inherit linkFiles; } {
+    backend = {
+      cmd = backendCommand;
+    };
+    backends = lib.optionals (backend != null) [ backend ];
     inherit storage-backend
       packages
-      codegen
       compiler
       fetch-sources
-      backendCommand
       withDocs
       copyFiles
       ;

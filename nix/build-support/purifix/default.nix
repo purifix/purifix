@@ -18,9 +18,8 @@
   #
   # Example: ./some/path/to/purescript-strings
   src
-, backend ? null
-, backendCommand ? lib.optionalString (backend != null) "${backend}/bin/${backend.pname}"
 , storage-backend ? package: "https://packages.registry.purescript.org/${package.pname}/${package.version}.tar.gz"
+, backends ? [ ]
 , develop-packages ? null
 , allowMultiWorkspaceBuild ? false
 , withDocs ? true
@@ -127,7 +126,7 @@ let
     build-package {
       localPackages = localPackages_;
       inherit package-config;
-      inherit backend backendCommand storage-backend develop-packages withDocs copyFiles nodeModules;
+      inherit storage-backend develop-packages withDocs copyFiles nodeModules backends;
     };
 in
 if builtins.length package-names == 1 then

@@ -22,13 +22,13 @@ let
 in
 { storage-backend
 , packages
-, codegen
 , compiler
 , fetch-sources
-, backendCommand
 , withDocs
 , copyFiles
+, backends
 , filterPackages ? (pkg: true)
+, backend
 }: final: inputs:
 let
   build-package = package:
@@ -39,6 +39,9 @@ let
       dependencies = transitive // directs;
       deps = builtins.attrNames dependencies;
       direct-deps = builtins.attrNames directs;
+      backendArgs = [ backend.cmd or "" ] ++ (backend.args or [ ]);
+      backendCommand = toString backendArgs;
+      codegen = if backendCommand == "" then "js" else "corefn";
       copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages direct-deps);
       caches = map (dep: ''${get-dep dep}/output/cache-db.json'') (builtins.filter filterPackages deps);
       globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') (builtins.filter filterPackages deps);
@@ -72,7 +75,7 @@ let
         phases = [ "preparePhase" "buildPhase" "installPhase" "fixupPhase" ];
         nativeBuildInputs = [
           compiler
-        ];
+        ] ++ backends;
         inherit preparePhase;
         buildPhase = ''
           purs compile --codegen "${codegen}${lib.optionalString withDocs ",docs"}" ${toString globs} "${package.src}/src/**/*.purs"
