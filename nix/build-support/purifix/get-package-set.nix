@@ -185,8 +185,7 @@ let
       toList = x: if builtins.typeOf x == "list" then x else builtins.attrNames x;
       dependencies =
         if builtins.pathExists "${meta.src}/purifix.json"
-        then
-          toList (targetPurifixJSON.dependencies or [ ])
+        then toList (targetPurifixJSON.package.dependencies or [ ])
         else if builtins.pathExists "${meta.src}/purs.json"
         then
           toList (targetPursJSON.dependencies or { })
