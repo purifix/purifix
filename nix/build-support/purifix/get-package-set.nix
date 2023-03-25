@@ -136,9 +136,10 @@ let
 
 
   readPackage = package: value:
-    if builtins.typeOf value == "string"
+    (if builtins.typeOf value == "string"
     then readPackageByVersion package value
-    else readPackageInline package value;
+    else readPackageInline package value
+    ) // { isLocal = value.isLocal or false; };
 
   # Fetch metadata about where to download each package in the package set as
   # well as the hash for the tarball to download.
