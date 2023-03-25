@@ -28,7 +28,7 @@ let
   yaml = package-config.config;
   src = package-config.repo;
   package-set-config = workspace.package_set or workspace.set;
-  extra-packages = (workspace.extra_packages or { }) // localPackages;
+  extra-packages = (workspace.extra_packages or { }) // (lib.mapAttrs (_: x: x // { isLocal = true; }) localPackages);
   inherit (callPackage ./get-package-set.nix
     { inherit fromYAML purescript-registry purescript-registry-index; }
     {

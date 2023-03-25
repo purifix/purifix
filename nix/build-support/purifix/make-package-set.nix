@@ -45,6 +45,7 @@ let
       copyOutput = map (dep: ''${get-dep dep}/output/*'') (builtins.filter filterPackages direct-deps);
       caches = map (dep: ''${get-dep dep}/output/cache-db.json'') (builtins.filter filterPackages deps);
       globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') (builtins.filter filterPackages deps);
+      isLocal = package.isLocal;
       prepareCommand =
         if copyFiles then
           "echo ${toString copyOutput} | xargs cp --no-clobber -r --preserve -t output"
@@ -93,6 +94,7 @@ let
           inherit globs caches copyOutput;
           inherit package;
           inherit dependencies;
+          inherit isLocal;
           deps = copy-deps;
         };
       };
