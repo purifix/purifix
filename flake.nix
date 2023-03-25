@@ -1,7 +1,7 @@
 {
   description = "Tool for building PureScript projects with Nix";
 
-  inputs.nixpkgs.url = "nixpkgs"; #"github:NixOS/nixpkgs";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
   inputs.purescript-registry.url = "github:purescript/registry";
   inputs.purescript-registry.flake = false;
@@ -89,6 +89,12 @@
             conflict = pkgs.purifix {
               src = ./examples/conflict;
             };
+            ps = (pkgs.extend purenix.overlay).extend (final: prev: {
+              purescript = easy-ps.purs-0_15_4;
+            });
+            easy-ps = import easy-purescript-nix {
+              pkgs = ps;
+            };
             examples = {
               inherit example-registry-package;
               conflict = conflict.top-level-conflict;
@@ -101,9 +107,11 @@
                 minify = true;
               };
               example-registry-package-docs = example-registry-package.docs { };
-              example-purenix-package = (pkgs.extend purenix.overlay).purifix {
+              example-purenix-package = ps.purifix {
                 src = ./examples/example-purenix-package;
-                backend = pkgs.purenix;
+                backends = [ ps.purenix ];
+                copyFiles = true;
+                withDocs = false;
               };
               purescript-package = pkgs.purifix {
                 src = ./examples/purescript-package;
@@ -111,10 +119,12 @@
               remote-monorepo = pkgs.purifix {
                 src = ./examples/remote-monorepo;
               };
-              purenix-package-set = pkgs.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+              purenix-package-set = ps.callPackage ./nix/build-support/purifix/build-package-set.nix { inherit fromYAML purescript-registry purescript-registry-index; } {
+                backend = pkgs.purenix;
+                copyFiles = true;
                 package-set-config = {
-                  url = "https://raw.githubusercontent.com/considerate/purenix-package-sets/58722e0989beca7ae8d11495691f0684188efa8c/package-sets/0.0.1.json";
-                  hash = "sha256-F/7YwbybwIxvPGzTPrViF8MuBWf7ztPnNnKyyWkrEE4=";
+                  url = "https://raw.githubusercontent.com/purenix-org/purenix-package-sets/a7b9a5a90d0e1a53b219764abcbcbad654d240aa/package-sets/0.0.1.json";
+                  hash = "sha256-9lKK3VUU4E27zvpepKAROdWexXavhxDNM6R+P7GaoN8=";
                 };
               };
             };
