@@ -26,12 +26,8 @@ let
       { inherit package-set-config extra-packages; })
     packages
     package-set;
-  fetch-sources = callPackage ./fetch-sources.nix { };
   compiler = purifix-compiler package-set.compiler;
-  closure = fetch-sources {
-    inherit packages storage-backend;
-    dependencies = builtins.attrNames packages;
-  };
+  fetchPackage = callPackage ./fetch-package.nix { inherit storage-backend; };
   make-pkgs = callPackage ./make-package-set.nix { inherit linkFiles; } {
     backend = {
       cmd = backendCommand;
@@ -40,12 +36,11 @@ let
     inherit storage-backend
       packages
       compiler
-      fetch-sources
+      fetchPackage
       withDocs
-      copyFiles
-      ;
+      copyFiles;
   };
-  pkgs = make-pkgs pkgs closure.packages;
+  pkgs = make-pkgs pkgs packages;
   paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;
   package-set-version =
     if builtins.hasAttr "registry" package-set-config
