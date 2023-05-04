@@ -61,27 +61,6 @@ let
 
   runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
-  # backendCommand = yaml.pacakge.backend or "";
-  # codegen = if backendCommand == "" then "js" else "corefn";
-
-  # purifix = (writeShellScriptBin "purifix" ''
-  #   mkdir -p output
-  #   cp --no-clobber --preserve -r -L -t output ${dev-pkgs.purifix-dev-shell.deps}/output/*
-  #   chmod -R +w output
-  #   purs compile --codegen ${codegen} ${toString dev-pkgs.purifix-dev-shell.globs} "$@"
-  #   ${backendCommand}
-  # '') // {
-  #   globs = dev-pkgs.purifix-dev-shell.globs;
-  # };
-
-  purifix-project =
-    let
-      relative = trail: lib.concatStringsSep "/" trail;
-      projectGlobs = lib.mapAttrsToList (name: pkg: ''"''${PURIFIX_ROOT:-.}/${relative pkg.trail}/src/**/*.purs"'') localPackages;
-    in
-    writeShellScriptBin "purifix-project" ''
-      purifix ${toString projectGlobs} "$@"
-    '';
 
   run =
     let evaluate = "import {main} from 'file://$out/output/${runMain}/index.js'; main();";
@@ -137,19 +116,10 @@ let
     };
 
 
-  develop =
-    stdenv.mkDerivation {
-      name = "develop-${yaml.package.name}";
-      buildInputs = [
-        compiler
-        purescript-language-server
-        # purifix
-        purifix-project
-      ];
-      # shellHook = ''
-      #   export PURS_IDE_SOURCES='${toString purifix.globs}'
-      # '';
-    };
+  develop = callPackage ./purifix-shell-for.nix { } {
+    purifix-dev-shell = null; #TODO
+
+  };
 
   build = pkgs.${yaml.package.name}.overrideAttrs
     (old: {
