@@ -36,27 +36,18 @@ let
       inherit (package-config) src repo;
     }) packages package-set;
 
-
-  # all-locals = builtins.attrNames localPackages;
-  # locals = if develop-packages == null then all-locals else develop-packages;
-  # raw-develop-dependencies = builtins.concatLists (map (pkg: localPackages.${pkg}.config.package.dependencies) locals);
-  # develop-dependencies = builtins.filter (dep: !(builtins.elem dep locals)) raw-develop-dependencies;
-
   compiler-version = package-set.compiler;
   compiler = purifix-compiler compiler-version;
-
-  make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { inherit linkFiles; }) {
+  build-package = callPackage ./build-package.nix { inherit linkFiles; } {
     backend = workspace.backend or { };
-    inherit storage-backend
-      packages
+    inherit
       compiler
-      fetchPackage
       withDocs
       backends
-      copyFiles
-      ;
+      copyFiles;
   };
 
+  make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { inherit fetchPackage build-package; });
   pkgs = make-pkgs packages;
 
   runMain = yaml.package.run.main or "Main";
@@ -116,10 +107,15 @@ let
     };
 
 
-  develop = callPackage ./purifix-shell-for.nix { } {
-    purifix-dev-shell = null; #TODO
-
-  };
+  develop = callPackage ./purifix-shell-for.nix
+    {
+      inherit purescript-language-server build-package;
+    }
+    {
+      purifix-pkgs = pkgs;
+      inherit compiler localPackages develop-packages;
+      package = packages.${yaml.package.name};
+    };
 
   build = pkgs.${yaml.package.name}.overrideAttrs
     (old: {

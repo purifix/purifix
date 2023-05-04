@@ -28,18 +28,17 @@ let
     package-set;
   compiler = purifix-compiler package-set.compiler;
   fetchPackage = callPackage ./fetch-package.nix { inherit storage-backend; };
-  make-pkgs = callPackage ./make-package-set.nix { inherit linkFiles; } {
+  build-package = callPackage ./build-package.nix { inherit linkFiles; } {
     backend = {
       cmd = backendCommand;
     };
     backends = lib.optionals (backend != null) [ backend ];
-    inherit storage-backend
-      packages
+    inherit
       compiler
-      fetchPackage
       withDocs
       copyFiles;
   };
+  make-pkgs = callPackage ./make-package-set.nix { inherit fetchPackage build-package; };
   pkgs = make-pkgs packages;
   paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;
   package-set-version =

@@ -2,13 +2,28 @@
 , purescript-language-server
 , stdenv
 , lib
+, build-package
 }:
 { package
 , compiler
-, purifix-dev-shell
 , localPackages
+, develop-packages
+, purifix-pkgs
 }:
 let
+  dev-shell-package = {
+    pname = "purifix-dev-shell";
+    version = "0.0.0";
+    src = null;
+    subdir = null;
+    dependencies = develop-dependencies;
+  };
+  purifix-dev-shell = build-package purifix-pkgs dev-shell-package;
+
+  all-locals = builtins.attrNames localPackages;
+  locals = if develop-packages == null then all-locals else develop-packages;
+  raw-develop-dependencies = builtins.concatLists (map (pkg: localPackages.${pkg}.config.package.dependencies) locals);
+  develop-dependencies = builtins.filter (dep: !(builtins.elem dep locals)) raw-develop-dependencies;
   backendCommand = package.backend or "";
   codegen = if backendCommand == "" then "js" else "corefn";
   purifix = (writeShellScriptBin "purifix" ''
