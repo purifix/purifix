@@ -40,7 +40,7 @@ let
       withDocs
       copyFiles;
   };
-  pkgs = make-pkgs pkgs packages;
+  pkgs = make-pkgs packages;
   paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;
   package-set-version =
     if builtins.hasAttr "registry" package-set-config

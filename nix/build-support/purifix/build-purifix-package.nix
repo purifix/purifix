@@ -57,8 +57,7 @@ let
       ;
   };
 
-  pkgs = make-pkgs pkgs packages;
-
+  pkgs = make-pkgs packages;
 
   runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";

@@ -29,7 +29,7 @@ in
 , filterPackages ? (pkg: true)
 , backend
 , fetchPackage
-}: final: inputs:
+}: inputs:
 let
   build-package = package:
     let
@@ -116,5 +116,6 @@ let
       };
     in
     value;
+  final = builtins.mapAttrs (name: pkg: build-package (fetchPackage pkg)) inputs;
 in
-builtins.mapAttrs (name: pkg: build-package (fetchPackage pkg)) inputs
+final
