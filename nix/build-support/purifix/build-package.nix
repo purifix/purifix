@@ -58,27 +58,28 @@ let
       cp -r -L output test-output
       ${backend.cmd} --run ${testMain}.main ${toString (backend.args or [])}
     '';
-  copyOutput = map (dep: ''${get-dep dep}/output/*'') direct-deps;
-  caches = map (dep: ''${get-dep dep}/output/cache-db.json'') deps;
-  test-caches = map (dep: ''${get-dep dep}/output/cache-db.json'') test-deps;
-  globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') deps;
   unique = xs: builtins.attrNames (builtins.listToAttrs (map
     (x: {
       name = x;
       value = null;
     })
     xs));
+  copyOutput = map (dep: ''${get-dep dep}/output/*'') direct-deps;
+  copyTestOutput = map (dep: ''${get-dep dep}/output/*'') (unique (direct-deps ++ test-dependencies));
+  caches = map (dep: ''${get-dep dep}/output/cache-db.json'') deps;
+  test-caches = map (dep: ''${get-dep dep}/output/cache-db.json'') test-deps;
+  globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') deps;
   test-globs = map (dep: ''"${(get-dep dep).package.src}/src/**/*.purs"'') (unique (deps ++ test-deps));
   isLocal = package.isLocal;
-  prepareCommand =
+  prepareCommand = outputs:
     if copyFiles then
-      "echo ${toString copyOutput} | xargs cp --no-clobber -r --preserve -t output"
+      "echo ${toString outputs} | xargs cp --no-clobber -r --preserve -t output"
     else
-      "echo ${toString copyOutput} | xargs ${linkFiles} output";
+      "echo ${toString outputs} | xargs ${linkFiles} output";
   preparePhase = ''
     mkdir -p output
   '' + lib.optionalString (builtins.length direct-deps > 0) ''
-    ${prepareCommand}
+    ${prepareCommand copyOutput}
     chmod -R +w output
     rm output/cache-db.json
     rm output/package.json
@@ -87,7 +88,7 @@ let
   prepareTests = ''
     mkdir -p output
   '' + lib.optionalString (builtins.length (test-deps) > 0) ''
-    ${prepareCommand}
+    ${prepareCommand copyTestOutput}
     chmod -R +w output
     rm output/cache-db.json
     rm output/package.json
