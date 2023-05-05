@@ -46,7 +46,10 @@ let
   dependencies = transitive // directs;
   deps = builtins.attrNames dependencies;
   test-deps = builtins.attrNames (test-transitive // transitive // test-directs // directs);
-  backendArgs = [ backend.cmd or "" ] ++ (backend.args or [ ]);
+  backendCmd = backend.cmd or "";
+  backendArgs =
+    lib.optionals (builtins.hasAttr "cmd" backend) [ backend.cmd ]
+    ++ (backend.args or [ ]);
   backendCommand = toString backendArgs;
   codegen = if backendCommand == "" then "js" else "corefn";
   testMain = package.test.main or "Test.Main";
@@ -122,7 +125,7 @@ let
         purs compile --codegen "${codegen}" ${toString test-globs} "${package.src}/src/**/*.purs" "${package.src}/test/**/*.purs"
         ${testCommand}
         # FIXME: move this into purenix
-        if [[ "${backend.cmd}" == "purenix" ]]; then
+        if [[ "${backendCmd}" == "purenix" ]]; then
           mkdir tmp-nix
           export NIX_STORE_PATH=$(pwd)/tmp-nix/store
           export NIX_DATA_DIR=$(pwd)/tmp-nix/share
