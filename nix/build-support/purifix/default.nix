@@ -22,10 +22,12 @@
 , backends ? [ ]
 , develop-packages ? null
 , allowMultiWorkspaceBuild ? false
+, doCheck ? false
 , withDocs ? true
 , copyFiles ? false
 , nodeModules ? null
 , localPackages ? null
+, overlays ? [ ]
 }:
 
 let
@@ -45,7 +47,16 @@ let
     build-package {
       localPackages = localPackages_;
       inherit package-config;
-      inherit storage-backend develop-packages withDocs copyFiles nodeModules backends;
+      inherit
+        storage-backend
+        develop-packages
+        withDocs
+        copyFiles
+        nodeModules
+        backends
+        overlays
+        doCheck
+        ;
     };
 in
 if builtins.length package-names == 1 then

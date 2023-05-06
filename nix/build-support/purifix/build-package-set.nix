@@ -16,6 +16,7 @@
 , backend ? null
 , copyFiles ? false
 , withDocs ? false
+, doCheck ? false
 , backendCommand ? lib.optionalString (backend != null) "${backend}/bin/${backend.pname}"
 }:
 let
@@ -36,10 +37,12 @@ let
     inherit
       compiler
       withDocs
-      copyFiles;
+      copyFiles
+      doCheck
+      ;
   };
   make-pkgs = callPackage ./make-package-set.nix { inherit fetchPackage build-package; };
-  pkgs = make-pkgs packages;
+  pkgs = lib.fix (make-pkgs packages);
   paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;
   package-set-version =
     if builtins.hasAttr "registry" package-set-config

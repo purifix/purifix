@@ -21,6 +21,8 @@
 , withDocs
 , nodeModules
 , copyFiles
+, overlays
+, doCheck
 }:
 let
   fetchPackage = callPackage ./fetch-package.nix { inherit storage-backend; };
@@ -44,11 +46,14 @@ let
       compiler
       withDocs
       backends
-      copyFiles;
+      copyFiles
+      doCheck
+      ;
   };
 
   make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { inherit fetchPackage build-package; });
-  pkgs = make-pkgs packages;
+  overrides = lib.foldr lib.composeExtensions (final: prev: { }) overlays;
+  pkgs = lib.fix (lib.extends overrides (make-pkgs packages));
 
   runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
