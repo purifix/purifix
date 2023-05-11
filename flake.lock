@@ -84,11 +84,11 @@
     "purescript-registry": {
       "flake": false,
       "locked": {
-        "lastModified": 1683098881,
-        "narHash": "sha256-Lg/VaQnZqJ54DYlQePtgumQUQ2Zs9ptSgp8PIVBKHMw=",
+        "lastModified": 1683790117,
+        "narHash": "sha256-DhQ1AbXC0DgnAPRxJ/yTkruCRWYaCpW19v/MccwPj4E=",
         "owner": "purescript",
         "repo": "registry",
-        "rev": "11eecb1d50188ad911c3b2b564d7e40163989210",
+        "rev": "700f2e092aade88d39dab28dabae9bfc7f3b63a3",
         "type": "github"
       },
       "original": {
@@ -100,11 +100,11 @@
     "purescript-registry-index": {
       "flake": false,
       "locked": {
-        "lastModified": 1683098612,
-        "narHash": "sha256-uR5b9kwq8W+z1Jk5YSccUx5a07AhYwxTsmYyOrGBAbA=",
+        "lastModified": 1683789848,
+        "narHash": "sha256-G42o8WjkCmDeRS23hq237DL5PDE3I5KOgjBCmoZt5js=",
         "owner": "purescript",
         "repo": "registry-index",
-        "rev": "5d3e8b3df6ff48823379c91debda5259e4718bad",
+        "rev": "97bca02060ce36a5bb2bd16ff4e811e0899586ec",
         "type": "github"
       },
       "original": {
