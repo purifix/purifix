@@ -42,11 +42,11 @@ let
       ;
   };
   make-pkgs = callPackage ./make-package-set.nix { inherit fetchPackage build-package; };
-  pkgs = lib.fix (make-pkgs packages);
-  paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;
+  pkgs = make-pkgs packages pkgs;
+  paths = lib.mapAttrsToList (name: path: { inherit name; path = "${path}"; }) pkgs;
   package-set-version =
     if builtins.hasAttr "registry" package-set-config
     then package-set-config.registry
     else package-set-config.git or "unknown";
 in
-linkFarm "purescript-registry-${package-set-version}" paths // pkgs
+(linkFarm "purescript-registry-${package-set-version}" paths) // pkgs
