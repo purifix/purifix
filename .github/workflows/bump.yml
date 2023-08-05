@@ -16,6 +16,7 @@ jobs:
       with:
         nix_conf: experimental-features = nix-command flakes
     - run: |
+        nix flake lock --update-input easy-purescript-nix
         nix flake lock --update-input purescript-registry
         nix flake lock --update-input purescript-registry-index
         git add flake.lock
