@@ -69,7 +69,7 @@
               "14.2.0" # jelly fails to compile
             ];
             package-set-versions = builtins.filter ({ registry-version, ... }: !(builtins.elem registry-version bad-package-sets)) package-set-versions-raw;
-            recent-package-set-versions = nixpkgs.lib.filter ({ registry-version, ... }: nixpkgs.lib.versionAtLeast registry-version "12.0.0") package-set-versions;
+            recent-package-set-versions = nixpkgs.lib.filter ({ registry-version, ... }: nixpkgs.lib.versionAtLeast registry-version "28.0.0") package-set-versions;
             to-package-set = { registry-version, major, minor, patch }:
               {
                 name = "registry-${major}_${minor}_${patch}";
