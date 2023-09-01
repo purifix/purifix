@@ -144,8 +144,6 @@
         );
 
 
-      # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
-
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor.${system};
@@ -158,7 +156,7 @@
             name = "purifix-shell";
             buildInputs = [ easy-ps.purs-0_15_7 pkgs.yaml2json pkgs.jq ];
           };
-          # This purescript development shell just contains dhall, purescript,
+          # This purescript development shell just contains purescript
           # and spago.  This is convenient for making changes to
           # ./example-purescript-package. But most users can ignore this.
           purescript-dev-shell = (nixpkgsFor.${system}.purifix {
