@@ -17,4 +17,4 @@ jobs:
         name: purifix
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - name: compile packages
-      run: nix .#build-uncached .#packages.x86_64-linux.registry-package-sets
+      run: nix run .#build-uncached .#packages.x86_64-linux.registry-package-sets
