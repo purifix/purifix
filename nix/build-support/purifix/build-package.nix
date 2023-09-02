@@ -109,7 +109,6 @@ let
       mv output "$out/"
     '';
   };
-  has-tests = builtins.pathExists (package.src + "/test");
   value = stdenv.mkDerivation {
     pname = package.pname;
     version = package.version or "0.0.0";
@@ -123,18 +122,20 @@ let
       ${backendCommand}
     '';
     doCheck = doCheck;
-    checkPhase = lib.optionalString has-tests ''
-      ${prepareTests}
-      purs compile --codegen "${codegen}" ${toString test-globs} "${package.src}/src/**/*.purs" "${package.src}/test/**/*.purs"
-      ${testCommand}
-      # FIXME: move this into purenix
-      if [[ "${backendCmd}" == "purenix" ]]; then
-        mkdir tmp-nix
-        export NIX_STORE_PATH=$(pwd)/tmp-nix/store
-        export NIX_DATA_DIR=$(pwd)/tmp-nix/share
-        export NIX_LOG_DIR=$(pwd)/tmp-nix/log/nix
-        export NIX_STATE_DIR=$(pwd)/tmp-nix/log/nix
-        ${nix}/bin/nix-instantiate --eval --readonly-mode -E "let module = import ./output/Test.Main; in module.main null"
+    checkPhase = ''
+      if [ -d "tests" ]; then
+        ${prepareTests}
+        purs compile --codegen "${codegen}" ${toString test-globs} "${package.src}/src/**/*.purs" "${package.src}/test/**/*.purs"
+        ${testCommand}
+        # FIXME: move this into purenix
+        if [[ "${backendCmd}" == "purenix" ]]; then
+          mkdir tmp-nix
+          export NIX_STORE_PATH=$(pwd)/tmp-nix/store
+          export NIX_DATA_DIR=$(pwd)/tmp-nix/share
+          export NIX_LOG_DIR=$(pwd)/tmp-nix/log/nix
+          export NIX_STATE_DIR=$(pwd)/tmp-nix/log/nix
+          ${nix}/bin/nix-instantiate --eval --readonly-mode -E "let module = import ./output/Test.Main; in module.main null"
+        fi
       fi
     '';
     installPhase = ''
