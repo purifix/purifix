@@ -148,10 +148,27 @@
             nix-eval-jobs = nix-eval-jobs.packages.${system}.nix-eval-jobs;
             inherit all-examples;
             inherit registry-package-sets;
+            inherit recent-registry-package-sets;
           }
           // examples
         );
 
+      apps = forAllSystems (system:
+        let
+          pkgs = nixpkgsFor.${system};
+          script = pkgs.substituteAll {
+            src = ./build.sh;
+            isExecutable = true;
+            inherit (pkgs) bash jq;
+            nixevaljobs = nix-eval-jobs.packages.${system}.nix-eval-jobs;
+          };
+        in
+        {
+          build-uncached = {
+            type = "app";
+            program = "${script}";
+          };
+        });
 
       devShells = forAllSystems (system:
         let
