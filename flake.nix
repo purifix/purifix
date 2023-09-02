@@ -13,6 +13,8 @@
 
   inputs.purenix.url = "github:purenix-org/purenix";
 
+  inputs.nix-eval-jobs.url = "github:nix-community/nix-eval-jobs";
+
   outputs =
     { self
     , nixpkgs
@@ -20,6 +22,7 @@
     , purescript-registry-index
     , easy-purescript-nix
     , purenix
+    , nix-eval-jobs
     }:
     let
       # System types to support.
@@ -46,6 +49,8 @@
       overlay = import ./nix/overlay.nix {
         inherit purescript-registry purescript-registry-index easy-purescript-nix;
       };
+
+      legacyPackages = forAllSystems (system: nixpkgsFor.${system});
 
       packages = forAllSystems
         (system:
@@ -139,7 +144,11 @@
           registry-package-sets // {
             inherit all-package-sets new-package-sets;
           }
-          // { inherit all-examples; }
+          // {
+            nix-eval-jobs = nix-eval-jobs.packages.${system}.nix-eval-jobs;
+            inherit all-examples;
+            inherit registry-package-sets;
+          }
           // examples
         );
 

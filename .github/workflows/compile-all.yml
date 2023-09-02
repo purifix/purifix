@@ -16,7 +16,21 @@ jobs:
       with:
         name: purifix
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - run: nix build .#all-package-sets -L
-      # hopefully this will allow the cachix action to push
-      # paths and next run is more likely to complete
-      timeout-minutes: 25
+    - run: |
+        export PATH="$PATH:$(nix build '.#jq' --no-link --print-out-paths)/bin"
+        export PATH="$PATH:$(nix build '.#nix-eval-jobs' --no-link --print-out-paths)/bin"
+        # evaluate all package sets
+        nix-eval-jobs --flake .#packages.x86_64-linux.registry-package-sets --gc-roots-dir gcroots --check-cache-status | tee eval.json
+        # find uncached derivations
+        IFS=$'\n' read -r -d '' -a derivations <<<"$(jq -r "select(.isCached | not) | .drvPath" <eval.json)"
+        # build the uncached derivations
+        for derivation in "${derivations[@]}"; do
+          echo "building derivation:"
+          echo "$derivation"
+          nix-store --realise "$derivation"
+        done
+        # print built derivations
+        IFS=$'\n' read -r -d '' -a attrs <<<"$(jq -r "select(.isCached) | .attr" <eval.json)"
+        for attr in "${attrs[@]}"; do
+          echo "skipping $attr because it's already built and cached"
+        done
