@@ -17,3 +17,4 @@ jobs:
         name: purifix
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: nix build .#new-package-sets -L
+      timeout-minutes: 25
