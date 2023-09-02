@@ -7,8 +7,4 @@ eval_results="${2:-eval.json}"
 # find uncached derivations
 IFS=$'\n' read -r -d '' -a derivations <<<"$(@jq@/bin/jq -r "select(.isCached | not) | .drvPath" <"$eval_results")"
 # build the uncached derivations
-for derivation in "${derivations[@]}"; do
-	echo "building derivation:"
-	echo "$derivation"
-	nix-store --realise "$derivation"
-done
+nix build -L "${derivations[@]}"
