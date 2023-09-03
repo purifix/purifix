@@ -21,12 +21,14 @@
 , withDocs
 , nodeModules
 , copyFiles
+, overlays
+, doCheck
 }:
 let
+  fetchPackage = callPackage ./fetch-package.nix { inherit storage-backend; };
   linkFiles = callPackage ./link-files.nix { };
   workspace = package-config.workspace;
   yaml = package-config.config;
-  src = package-config.repo;
   package-set-config = workspace.package_set or workspace.set;
   extra-packages = (workspace.extra_packages or { }) // (lib.mapAttrs (_: x: x // { isLocal = true; }) localPackages);
   inherit (callPackage ./get-package-set.nix
@@ -36,92 +38,25 @@ let
       inherit (package-config) src repo;
     }) packages package-set;
 
-  fetch-sources = callPackage ./fetch-sources.nix { };
-
-  # Download the source code for each package in the transitive closure
-  # of the build dependencies;
-  build-closure = fetch-sources {
-    inherit packages storage-backend;
-    dependencies = [ yaml.package.name ]
-      ++ (yaml.package.dependencies or [ ]);
-  };
-
-  # Download the source code for each package in the transitive closure
-  # of the build and test dependencies;
-  test-closure = fetch-sources {
-    inherit packages storage-backend;
-    dependencies = [ yaml.package.name ]
-      ++ (yaml.package.test.dependencies or [ ])
-      ++ (yaml.package.dependencies or [ ]);
-  };
-
-  package-set-closure = fetch-sources {
-    inherit packages storage-backend;
-    dependencies = builtins.attrNames packages;
-  };
-
-  all-locals = builtins.attrNames localPackages;
-  locals = if develop-packages == null then all-locals else develop-packages;
-  raw-develop-dependencies = builtins.concatLists (map (pkg: localPackages.${pkg}.config.package.dependencies) locals);
-  develop-dependencies = builtins.filter (dep: !(builtins.elem dep locals)) raw-develop-dependencies;
-  develop-closure = fetch-sources {
-    inherit packages storage-backend;
-    dependencies = develop-dependencies;
-  };
-
   compiler-version = package-set.compiler;
   compiler = purifix-compiler compiler-version;
-
-  make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { inherit linkFiles; }) {
+  build-package = callPackage ./build-package.nix { inherit linkFiles; } {
     backend = workspace.backend or { };
-    inherit storage-backend
-      packages
+    inherit
       compiler
-      fetch-sources
       withDocs
       backends
       copyFiles
+      doCheck
       ;
   };
 
-  build-pkgs = make-pkgs build-pkgs build-closure.packages;
-
-  test-pkgs = make-pkgs test-pkgs test-closure.packages;
-
-  dev-shell-package = {
-    pname = "purifix-dev-shell";
-    version = "0.0.0";
-    src = null;
-    subdir = null;
-    dependencies = develop-dependencies;
-  };
-  dev-pkgs = make-pkgs dev-pkgs (develop-closure.packages ++ [ dev-shell-package ]);
-
-  pkgs = make-pkgs pkgs package-set-closure.packages;
+  make-pkgs = lib.makeOverridable (callPackage ./make-package-set.nix { inherit fetchPackage build-package; });
+  overrides = lib.foldr lib.composeExtensions (final: prev: { }) overlays;
+  pkgs = lib.fix (lib.extends overrides (make-pkgs packages));
 
   runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
-  backendCommand = yaml.pacakge.backend or "";
-  codegen = if backendCommand == "" then "js" else "corefn";
-
-  purifix = (writeShellScriptBin "purifix" ''
-    mkdir -p output
-    cp --no-clobber --preserve -r -L -t output ${dev-pkgs.purifix-dev-shell.deps}/output/*
-    chmod -R +w output
-    purs compile --codegen ${codegen} ${toString dev-pkgs.purifix-dev-shell.globs} "$@"
-    ${backendCommand}
-  '') // {
-    globs = dev-pkgs.purifix-dev-shell.globs;
-  };
-
-  purifix-project =
-    let
-      relative = trail: lib.concatStringsSep "/" trail;
-      projectGlobs = lib.mapAttrsToList (name: pkg: ''"''${PURIFIX_ROOT:-.}/${relative pkg.trail}/src/**/*.purs"'') localPackages;
-    in
-    writeShellScriptBin "purifix-project" ''
-      purifix ${toString projectGlobs} "$@"
-    '';
 
   run =
     let evaluate = "import {main} from 'file://$out/output/${runMain}/index.js'; main();";
@@ -141,24 +76,23 @@ let
     };
 
   # TODO: figure out how to run tests with other backends, js only for now
-  test =
-    test-pkgs.${yaml.package.name}.overrideAttrs
-      (old: {
-        nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ nodejs ];
-        buildPhase = ''
-          purs compile ${toString old.passthru.globs} "${old.passthru.package.src}/${old.passthru.package.subdir or ""}/test/**/*.purs"
-        '';
-        installPhase = ''
-          cp -r -L output test-output
-          ${lib.optionalString (nodeModules != null) "ln -s ${nodeModules} node_modules"}
-          node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './test-output/${testMain}/index.js'; main();" | tee $out
-        '';
-        fixupPhase = "#nothing to be done here";
-      });
+  test = pkgs.${yaml.package.name}.overrideAttrs
+    (old: {
+      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ nodejs ];
+      buildPhase = ''
+        purs compile ${toString old.passthru.globs} "${old.passthru.package.src}/${old.passthru.package.subdir or ""}/test/**/*.purs"
+      '';
+      installPhase = ''
+        cp -r -L output test-output
+        ${lib.optionalString (nodeModules != null) "ln -s ${nodeModules} node_modules"}
+        node --input-type=module --abort-on-uncaught-exception --trace-sigint --trace-uncaught --eval="import {main} from './test-output/${testMain}/index.js'; main();" | tee $out
+      '';
+      fixupPhase = "#nothing to be done here";
+    });
 
   docs = { format ? "html" }:
     let
-      inherit (build-pkgs.${yaml.package.name}) globs;
+      inherit (pkgs.${yaml.package.name}) globs;
     in
     stdenv.mkDerivation {
       name = "${yaml.package.name}-docs";
@@ -168,7 +102,7 @@ let
       ];
       buildPhase = ''
         mkdir output
-        cp --no-clobber --preserve -r -L -t output ${build-pkgs.${yaml.package.name}.deps}/output/*
+        cp --no-clobber --preserve -r -L -t output ${pkgs.${yaml.package.name}.deps}/output/*
         chmod -R +w output
         purs docs --format ${format} ${toString globs} "$src/**/*.purs" --output docs
       '';
@@ -178,21 +112,17 @@ let
     };
 
 
-  develop =
-    stdenv.mkDerivation {
-      name = "develop-${yaml.package.name}";
-      buildInputs = [
-        compiler
-        purescript-language-server
-        purifix
-        purifix-project
-      ];
-      shellHook = ''
-        export PURS_IDE_SOURCES='${toString purifix.globs}'
-      '';
+  develop = callPackage ./purifix-shell-for.nix
+    {
+      inherit purescript-language-server build-package;
+    }
+    {
+      purifix-pkgs = pkgs;
+      inherit compiler localPackages develop-packages;
+      package = packages.${yaml.package.name};
     };
 
-  build = build-pkgs.${yaml.package.name}.overrideAttrs
+  build = pkgs.${yaml.package.name}.overrideAttrs
     (old: {
       fixupPhase = "# don't clear output directory";
       passthru = old.passthru // {

@@ -16,6 +16,7 @@
 , backend ? null
 , copyFiles ? false
 , withDocs ? false
+, doCheck ? false
 , backendCommand ? lib.optionalString (backend != null) "${backend}/bin/${backend.pname}"
 }:
 let
@@ -26,30 +27,26 @@ let
       { inherit package-set-config extra-packages; })
     packages
     package-set;
-  fetch-sources = callPackage ./fetch-sources.nix { };
   compiler = purifix-compiler package-set.compiler;
-  closure = fetch-sources {
-    inherit packages storage-backend;
-    dependencies = builtins.attrNames packages;
-  };
-  make-pkgs = callPackage ./make-package-set.nix { inherit linkFiles; } {
+  fetchPackage = callPackage ./fetch-package.nix { inherit storage-backend; };
+  build-package = callPackage ./build-package.nix { inherit linkFiles; } {
     backend = {
       cmd = backendCommand;
     };
     backends = lib.optionals (backend != null) [ backend ];
-    inherit storage-backend
-      packages
+    inherit
       compiler
-      fetch-sources
       withDocs
       copyFiles
+      doCheck
       ;
   };
-  pkgs = make-pkgs pkgs closure.packages;
-  paths = lib.mapAttrsToList (name: path: { inherit name path; }) pkgs;
+  make-pkgs = callPackage ./make-package-set.nix { inherit fetchPackage build-package; };
+  pkgs = make-pkgs packages pkgs;
+  paths = lib.mapAttrsToList (name: path: { inherit name; path = "${path}"; }) pkgs;
   package-set-version =
     if builtins.hasAttr "registry" package-set-config
     then package-set-config.registry
     else package-set-config.git or "unknown";
 in
-linkFarm "purescript-registry-${package-set-version}" paths // pkgs
+(linkFarm "purescript-registry-${package-set-version}" paths) // pkgs

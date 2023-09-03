@@ -13,6 +13,8 @@
 
   inputs.purenix.url = "github:purenix-org/purenix";
 
+  inputs.nix-eval-jobs.url = "github:nix-community/nix-eval-jobs";
+
   outputs =
     { self
     , nixpkgs
@@ -20,6 +22,7 @@
     , purescript-registry-index
     , easy-purescript-nix
     , purenix
+    , nix-eval-jobs
     }:
     let
       # System types to support.
@@ -46,6 +49,8 @@
       overlay = import ./nix/overlay.nix {
         inherit purescript-registry purescript-registry-index easy-purescript-nix;
       };
+
+      legacyPackages = forAllSystems (system: nixpkgsFor.${system});
 
       packages = forAllSystems
         (system:
@@ -139,12 +144,31 @@
           registry-package-sets // {
             inherit all-package-sets new-package-sets;
           }
-          // { inherit all-examples; }
+          // {
+            nix-eval-jobs = nix-eval-jobs.packages.${system}.nix-eval-jobs;
+            inherit all-examples;
+            inherit registry-package-sets;
+            inherit recent-registry-package-sets;
+          }
           // examples
         );
 
-
-      # defaultPackage = forAllSystems (system: self.packages.${system}.hello);
+      apps = forAllSystems (system:
+        let
+          pkgs = nixpkgsFor.${system};
+          script = pkgs.substituteAll {
+            src = ./build.sh;
+            isExecutable = true;
+            inherit (pkgs) bash jq;
+            nixevaljobs = nix-eval-jobs.packages.${system}.nix-eval-jobs;
+          };
+        in
+        {
+          build-uncached = {
+            type = "app";
+            program = "${script}";
+          };
+        });
 
       devShells = forAllSystems (system:
         let
@@ -156,9 +180,14 @@
         {
           default = pkgs.mkShell {
             name = "purifix-shell";
-            buildInputs = [ easy-ps.purs-0_15_7 pkgs.yaml2json pkgs.jq ];
+            buildInputs = [
+              easy-ps.purs-0_15_7
+              pkgs.yaml2json
+              pkgs.jq
+              easy-ps.purescript-language-server
+            ];
           };
-          # This purescript development shell just contains dhall, purescript,
+          # This purescript development shell just contains purescript
           # and spago.  This is convenient for making changes to
           # ./example-purescript-package. But most users can ignore this.
           purescript-dev-shell = (nixpkgsFor.${system}.purifix {
@@ -166,7 +195,10 @@
           }).example-purescript-package.develop;
           spago = pkgs.mkShell {
             name = "spago-shell";
-            buildInputs = [ easy-ps.spago easy-ps.purs-0_15_7 ];
+            buildInputs = [
+              easy-ps.spago
+              easy-ps.purs-0_15_7
+            ];
           };
         });
 
