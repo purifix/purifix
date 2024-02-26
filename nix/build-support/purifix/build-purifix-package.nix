@@ -219,6 +219,7 @@ let
         in
         if app
         then ''
+          ${lib.optionalString (nodeModules != null) "export NODE_PATH=${nodeModules}:$NODE_PATH"}
           echo "import {main} from '${moduleFile}'; main()" | ${command} ${minification}
         ''
         else ''
