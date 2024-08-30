@@ -100,7 +100,7 @@ let
 
   runMain = yaml.package.run.main or "Main";
   testMain = yaml.package.test.main or "Test.Main";
-  backendCommand = yaml.pacakge.backend or "";
+  backendCommand = yaml.package.backend or "";
   codegen = if backendCommand == "" then "js" else "corefn";
 
   purifix = (writeShellScriptBin "purifix" ''
