@@ -141,11 +141,11 @@
     "purescript-registry": {
       "flake": false,
       "locked": {
-        "lastModified": 1727348446,
-        "narHash": "sha256-fPwT/5c67OE2zqTUCr6MeOArfggSqOLG4Gn1hykuddg=",
+        "lastModified": 1727422100,
+        "narHash": "sha256-dqfqX1qfT0s673mP6py/UP1khve7I1cWf5o4m2bCMFU=",
         "owner": "purescript",
         "repo": "registry",
-        "rev": "e656b0b7cfa71caba6d4fa03137f94049a96d90b",
+        "rev": "86436a0a83cdac6bc3d691927a456dfb8cd7c46a",
         "type": "github"
       },
       "original": {
